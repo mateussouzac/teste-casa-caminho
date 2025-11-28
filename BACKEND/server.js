@@ -18,7 +18,7 @@ const dbConfig = {
     }
 };
 
-// --- ROTAS DA API ---
+// INICIO MATEUS
 
 //(READ)
 app.get('/api/lista-espera', async (req, res) => {
@@ -91,8 +91,15 @@ app.delete('/api/lista-espera/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+//FIM MATEUS
 
+
+
+
+
+// DEIXAR NO FINAL
 const PORT = 3001;
 app.listen(PORT, () => {
     console.log(`Servidor ta on na porta ${PORT}`);
+
 });
