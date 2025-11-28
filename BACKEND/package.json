@@ -1,0 +1,17 @@
+{
+  "name": "backend-casa-caminho",
+  "version": "1.0.0",
+  "description": "API para o projeto Casa do Caminho",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.9.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
