@@ -140,6 +140,130 @@ app.get('/api/dashboard', async (req, res) => {
 //FIM MATEUS
 
 
+/* ==================================================================
+   MÓDULO DE PACIENTES (PAULA BESSA)
+   ================================================================== */
+
+// 1. LISTAR TODOS OS PACIENTES (GET)
+app.get('/api/pacientes', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        // Ajustado para tabela 'paciente' e 'id_paciente'
+        const [rows] = await connection.execute("SELECT * FROM paciente ORDER BY id_paciente DESC");
+        await connection.end();
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ erro: "Erro ao listar pacientes" });
+    }
+});
+
+// 2. BUSCAR UM PACIENTE (GET :id)
+app.get('/api/pacientes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute("SELECT * FROM paciente WHERE id_paciente = ?", [id]);
+        await connection.end();
+        
+        if (rows.length === 0) return res.status(404).json({ mensagem: "Paciente não encontrado" });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ erro: "Erro ao buscar paciente" });
+    }
+});
+
+// 3. CADASTRAR PACIENTE (POST) - A MÁGICA ACONTECE AQUI
+app.post('/api/pacientes', async (req, res) => {
+    const { nome, telefone, data_nascimento, cidade, condicao, diagnostico, observacoes } = req.body;
+    const obsFinal = condicao ? `${observacoes || ''} | Condição: ${condicao}` : observacoes;
+    const connection = await mysql.createConnection(dbConfig);
+    try {
+        await connection.beginTransaction(); 
+
+        // Passo A: Inserir na tabela PACIENTE
+        const [pacienteResult] = await connection.execute(
+            `INSERT INTO paciente (nome, telefone, data_nascimento, cidade, diagnostico, observacoes)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [nome, telefone, data_nascimento, cidade, diagnostico, obsFinal]
+        );
+        const idPaciente = pacienteResult.insertId;
+
+        // Passo B: Criar automaticamente uma SOLICITAÇÃO (Para aparecer na gestão)
+        const dataHoje = new Date().toISOString().split('T')[0];
+        const [solicResult] = await connection.execute(
+            `INSERT INTO solicitacao (id_paciente, id_usuario, data_solicitacao, status)
+             VALUES (?, 1, ?, 'Em análise')`, // Usamos ID 1 (Admin) como padrão
+            [idPaciente, dataHoje]
+        );
+        const idSolicitacao = solicResult.insertId;
+
+        // Passo C: Adicionar na LISTA DE ESPERA (Para aparecer na sua tela)
+        await connection.execute(
+            `INSERT INTO lista_espera (id_solicitacao, data_entrada, status_espera)
+             VALUES (?, ?, 'Em espera')`,
+            [idSolicitacao, dataHoje]
+        );
+
+        await connection.commit(); // Salva tudo
+        
+        // Retorna o paciente criado para o front dela não dar erro
+        const [novoPaciente] = await connection.execute("SELECT * FROM paciente WHERE id_paciente = ?", [idPaciente]);
+        res.status(201).json(novoPaciente[0]);
+
+    } catch (err) {
+        await connection.rollback(); // Desfaz se der erro
+        console.error("Erro no cadastro:", err);
+        res.status(500).json({ erro: "Erro ao criar paciente e solicitação" });
+    } finally {
+        await connection.end();
+    }
+});
+
+// 4. ATUALIZAR PACIENTE (PUT)
+app.put('/api/pacientes/:id', async (req, res) => {
+    const { id } = req.params;
+    const { nome, telefone, data_nascimento, cidade, condicao, diagnostico, observacoes } = req.body;
+    
+    const obsFinal = condicao ? `${observacoes || ''} | Condição: ${condicao}` : observacoes;
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        
+        const sql = `UPDATE paciente SET nome=?, telefone=?, data_nascimento=?, cidade=?, diagnostico=?, observacoes=? WHERE id_paciente=?`;
+        
+        await connection.execute(sql, [
+            nome, telefone, data_nascimento, cidade, diagnostico, obsFinal, id
+        ]);
+
+        const [rows] = await connection.execute("SELECT * FROM paciente WHERE id_paciente = ?", [id]);
+        await connection.end();
+
+        if (rows.length === 0) return res.status(404).json({ mensagem: "Paciente não encontrado" });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ erro: "Erro ao atualizar paciente" });
+    }
+});
+
+// 5. EXCLUIR PACIENTE (DELETE)
+app.delete('/api/pacientes/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        // O DELETE CASCADE no banco vai apagar as solicitações e lista de espera automaticamente
+        await connection.execute("DELETE FROM paciente WHERE id_paciente = ?", [id]);
+        await connection.end();
+        res.json({ mensagem: "Paciente excluído com sucesso" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ erro: "Erro ao excluir paciente" });
+    }
+});
+//FIM PAULA BESSA
+
 
 
 
