@@ -1,0 +1,145 @@
+/* Home.css - Estilo Oficial Casa do Caminho */
+
+.dashboard-container {
+    background-color: #f4f7f6;
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    color: #333;
+}
+
+/* --- CABEÇALHO --- */
+.dashboard-header {
+    background-color: #2EB6E8; /* Azul Oficial */
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.logo-area h2 { margin: 0; font-size: 1.5rem; }
+
+.search-area {
+    background: rgba(255,255,255,0.2);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: flex;
+    width: 300px;
+}
+.search-area input {
+    background: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    width: 100%;
+}
+.search-area input::placeholder { color: rgba(255,255,255,0.8); }
+
+.user-area { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.user-avatar { font-size: 1.5rem; background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: #2EB6E8; }
+
+/* --- GRID PRINCIPAL --- */
+.dashboard-main {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr; /* Coluna do meio mais larga */
+    gap: 25px;
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* --- CARDS GERAIS --- */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.card h3 {
+    margin-top: 0;
+    color: #2EB6E8;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* --- BOTÕES DE MENU --- */
+.buttons-stack { display: flex; flex-direction: column; gap: 10px; }
+.btn-menu {
+    display: block;
+    padding: 15px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+.btn-menu:hover { transform: translateY(-2px); }
+
+.btn-menu.active {
+    background-color: #2EB6E8; /* Azul */
+    color: white;
+    box-shadow: 0 4px 8px rgba(46, 182, 232, 0.3);
+}
+.btn-menu.disabled {
+    background-color: #e0e0e0;
+    color: #888;
+    pointer-events: none;
+}
+
+/* --- MAPA DE QUARTOS --- */
+.room-list { display: flex; flex-direction: column; gap: 8px; }
+.room-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+.room-item.livre { background-color: #d1e7dd; color: #0f5132; border-left: 5px solid #198754; }
+.room-item.ocupado { background-color: #cfe2ff; color: #084298; border-left: 5px solid #0d6efd; }
+.room-item.manutenção { background-color: #fff3cd; color: #664d03; border-left: 5px solid #ffc107; }
+
+/* --- STATUS GRID --- */
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.stat-box {
+    background-color: #f8f9fa;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+.stat-box h4 { margin: 0; font-size: 0.9rem; color: #666; }
+.stat-box strong { font-size: 1.8rem; color: #333; display: block; margin-top: 5px; }
+
+/* --- CHEGADAS --- */
+.arrival-list { list-style: none; padding: 0; }
+.arrival-list li {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+.arrival-list li .dot {
+    height: 12px; width: 12px;
+    background-color: #FFD700; /* Amarelo */
+    border-radius: 50%;
+    margin-right: 15px;
+}
+.arrival-list li div { display: flex; flex-direction: column; }
+.arrival-list li small { color: #888; }
+
+/* --- GRÁFICO MOCK --- */
+.pie-chart {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#2EB6E8 0% 70%, #FFD700 70% 100%);
+    margin: 0 auto 15px;
+}
+.link-blue { color: #2EB6E8; text-decoration: none; font-weight: bold; display: block; text-align: center;}

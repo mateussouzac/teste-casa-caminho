@@ -91,6 +91,51 @@ app.delete('/api/lista-espera/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// --- ROTA DA DASHBOARD (Dados Gerais) ---
+app.get('/api/dashboard', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+
+        // 1. Buscar Quartos (Mapa de Ocupação)
+        const [quartos] = await connection.execute('SELECT * FROM quarto');
+
+        // 2. Buscar Próximas Chegadas (Baseado na Lista de Espera com status 'Aguardando Confirmação')
+        const [chegadas] = await connection.execute(`
+            SELECT p.nome, l.data_entrada 
+            FROM lista_espera l
+            JOIN solicitacao s ON l.id_solicitacao = s.id_solicitacao
+            JOIN paciente p ON s.id_paciente = p.id_paciente
+            WHERE l.status_espera = 'Aguardando Confirmação'
+            LIMIT 4
+        `);
+
+        // 3. Contar Pendentes (Status 'Em espera')
+        const [pendentes] = await connection.execute("SELECT COUNT(*) as total FROM lista_espera WHERE status_espera = 'Em espera'");
+
+        // 4. Calcular Ocupação (Baseado nos quartos ocupados)
+        const totalQuartos = quartos.length;
+        const ocupados = quartos.filter(q => q.status_ocupacao === 'Ocupado').length;
+        const taxaOcupacao = totalQuartos > 0 ? Math.round((ocupados / totalQuartos) * 100) : 0;
+
+        await connection.end();
+
+        // Envia tudo junto para o Front-end
+        res.json({
+            quartos: quartos,
+            proximasChegadas: chegadas,
+            stats: {
+                ocupacao: taxaOcupacao,
+                leitosLivres: totalQuartos - ocupados,
+                pendentes: pendentes[0].total,
+                hospedes: ocupados // Simplificação: 1 hóspede por quarto ocupado
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao carregar dashboard" });
+    }
+});
 //FIM MATEUS
 
 
