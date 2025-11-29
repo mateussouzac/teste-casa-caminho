@@ -1,79 +1,89 @@
-.cadastro-container {
-    background-color: #2EB6E8; /* Fundo azul oficial */
-    min-height: 100vh;
+/* Layout principal */
+.cadastro-layout-full {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* --- CABEÇALHO AZUL --- */
+.cadastro-header {
+    background-color: #2EB6E8; /* Agora é AZUL */
+    padding: 15px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Removi a sombra forte para ficar "seamless", mas pode colocar de volta se quiser */
+    box-shadow: none; 
+    z-index: 10;
+}
+
+.header-left, .header-right {
+    flex: 1;
+    display: flex;
+}
+
+/* Logo com efeito de clique */
+.logo-img-header {
+    height: 50px;
+    width: auto;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.logo-img-header:hover {
+    transform: scale(1.1);
+}
+
+/* Título BRANCO centralizado */
+.header-title {
+    flex: 2;
+    text-align: center;
+    margin: 0;
+    color: white; /* Texto Branco */
+    font-size: 1.8rem;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* --- ÁREA DO CONTEÚDO --- */
+.cadastro-content-wrapper {
+    flex: 1;
+    background-color: #2EB6E8; /* Fundo continua Azul */
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 30px 20px;
+    overflow-y: auto;
 }
 
+/* --- CAIXA BRANCA DO FORMULÁRIO --- */
 .cadastro-box {
     background-color: white;
-    padding: 30px;
-    border-radius: 10px;
+    padding: 40px;
+    border-radius: 12px;
     width: 100%;
-    max-width: 600px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    max-width: 700px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15); /* Sombra mais suave */
 }
 
-.cadastro-box h2 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 25px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
-}
-
+/* --- ESTILOS DO FORMULÁRIO (Iguais) --- */
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
 .form-group input, .form-group select, .form-group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box; /* Importante para não estourar a largura */
+    width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem;
 }
-
-.form-row {
-    display: flex;
-    gap: 15px;
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: #2EB6E8;
 }
+.form-row { display: flex; gap: 20px; }
 .form-row .form-group { flex: 1; }
-
-textarea { resize: vertical; height: 80px; }
-
-.form-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
+textarea { resize: vertical; height: 100px; }
+.form-actions { display: flex; gap: 15px; margin-top: 30px; }
 .btn-salvar {
-    flex: 1;
-    padding: 12px;
-    background-color: #FFD700; /* Amarelo */
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.2s;
+    flex: 2; padding: 15px; background-color: #FFD700; border: none; border-radius: 6px;
+    font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: background 0.2s, transform 0.1s; color: #333;
 }
-.btn-salvar:hover { background-color: #ffea00; }
-
+.btn-salvar:hover { background-color: #ffea00; transform: translateY(-2px); }
 .btn-cancelar {
-    flex: 1;
-    padding: 12px;
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
+    flex: 1; padding: 15px; background-color: transparent; border: 2px solid #ccc; border-radius: 6px;
+    font-weight: bold; font-size: 1rem; cursor: pointer; color: #666; transition: all 0.2s;
 }
-.btn-cancelar:hover { background-color: #f0f0f0; }
+.btn-cancelar:hover { background-color: #f0f0f0; border-color: #bbb; color: #333;}
