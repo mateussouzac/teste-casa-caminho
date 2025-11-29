@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
-import logoImg from './assets/logo.png'; // Importando a imagem
+import logoImg from './assets/logo.png'; 
 
-// Mude para o link do Render se estiver testando online
-const API_URL = 'http://localhost:3001/api/dashboard'; 
+// URL da API (Se estiver rodando local, mude para http://localhost:3001/api/dashboard)
+const API_URL = 'https://teste-casa-caminho.onrender.com/api/dashboard';
 
 function Home() {
+  // Estado para armazenar os dados da dashboard
   const [data, setData] = useState({
     quartos: [],
     proximasChegadas: [],
     stats: { ocupacao: 0, leitosLivres: 0, pendentes: 0, hospedes: 0 }
   });
 
-  // Simulação de estado de login (Para teste, deixe null para ver o botão "Entrar")
-  // Depois, isso virá de um Contexto ou LocalStorage real
+  // Estado simples de usuário (pode ser expandido depois)
   const [usuario, setUsuario] = useState(null); 
-  // const [usuario, setUsuario] = useState({ nome: 'Raquel' }); // Descomente para testar logado
 
+  // Busca os dados ao carregar a página
   useEffect(() => {
     fetch(API_URL)
       .then(res => res.json())
@@ -27,10 +27,9 @@ function Home() {
 
   return (
     <div className="dashboard-container">
-      {/* Cabeçalho Oficial */}
+      {/* --- CABEÇALHO --- */}
       <header className="dashboard-header">
         <div className="logo-area">
-            {/* Agora usamos a IMAGEM importada */}
             <img src={logoImg} alt="Logo Casa do Caminho" className="logo-img" />
         </div>
         
@@ -39,16 +38,13 @@ function Home() {
           <span className="search-icon">🔍</span>
         </div>
 
-        {/* Lógica de Login: Mostra Botão ou Nome */}
         <div className="user-area">
           {usuario ? (
-            // SE ESTIVER LOGADO:
             <>
               <span className="user-name">Olá, {usuario.nome}</span>
               <div className="user-avatar">👤</div>
             </>
           ) : (
-            // SE NÃO ESTIVER LOGADO (Padrão):
             <Link to="/login" className="btn-login-header">
               <span className="icon-login">🔒</span> ENTRAR
             </Link>
@@ -56,15 +52,26 @@ function Home() {
         </div>
       </header>
 
+      {/* --- CONTEÚDO PRINCIPAL --- */}
       <main className="dashboard-main">
-        {/* Coluna 1: Ações e Gráfico */}
+        
+        {/* COLUNA 1: Ações e Gráfico */}
         <div className="col-actions">
             <section className="card actions-card">
                 <h3>Ações Rápidas</h3>
                 <div className="buttons-stack">
-                    <Link to="/cadastro" className="btn-menu disabled">Nova Solicitação</Link>
-                    <Link to="/alta" className="btn-menu disabled">Registrar Saída</Link>
-                    <Link to="/lista-espera" className="btn-menu active">Ver Lista de Espera</Link>
+                    <Link to="/cadastro-paciente" className="btn-menu active">
+                       CADASTRO PACIENTE
+                   </Link>
+                    <Link to="/nova-solicitacao" className="btn-menu active">
+                        NOVA SOLICITAÇÃO
+                    </Link>
+                    <Link to="/alta" className="btn-menu active">
+                        REGISTRAR SAÍDA / ALTA
+                    </Link>
+                    <Link to="/lista-espera" className="btn-menu active">
+                        VER LISTA DE ESPERA
+                    </Link>
                 </div>
             </section>
 
@@ -77,7 +84,7 @@ function Home() {
             </section>
         </div>
 
-        {/* Coluna 2: Mapa de Quartos */}
+        {/* COLUNA 2: Mapa de Quartos */}
         <div className="col-map">
             <section className="card">
                 <h3>Mapa de Ocupação</h3>
@@ -88,12 +95,12 @@ function Home() {
                             <span className="status-label">{quarto.status_ocupacao}</span>
                         </div>
                     ))}
-                    {data.quartos.length === 0 && <p>Nenhum quarto cadastrado.</p>}
+                    {data.quartos.length === 0 && <p style={{padding: '10px'}}>Nenhum quarto cadastrado.</p>}
                 </div>
             </section>
         </div>
 
-        {/* Coluna 3: Status e Chegadas */}
+        {/* COLUNA 3: Status e Chegadas */}
         <div className="col-status">
             <section className="card status-grid-card">
                 <h3>Status Geral</h3>
@@ -129,7 +136,7 @@ function Home() {
                             </div>
                         </li>
                     ))}
-                    {data.proximasChegadas.length === 0 && <li style={{color:'#999'}}>Sem chegadas previstas.</li>}
+                    {data.proximasChegadas.length === 0 && <li style={{padding: '10px', color:'#999'}}>Sem chegadas previstas.</li>}
                 </ul>
             </section>
         </div>
