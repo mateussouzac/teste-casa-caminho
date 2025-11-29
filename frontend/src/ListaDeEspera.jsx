@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // Importante para o link da logo
 import './ListaDeEspera.css';
+import logoImg from './assets/logo.png'; // Reutilizando a logo que você já tem
 
-// URL do seu Back-end no Render
+// URL da API (Render)
 const API_URL = 'https://teste-casa-caminho.onrender.com/api/lista-espera';
 
 function ListaDeEspera() {
@@ -36,7 +38,7 @@ function ListaDeEspera() {
     };
 
     const handleRemover = async (id) => {
-        if (window.confirm('Tem certeza?')) {
+        if (window.confirm('Tem certeza que deseja remover esta solicitação?')) {
             try {
                 await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
                 fetchLista();
@@ -46,10 +48,21 @@ function ListaDeEspera() {
 
     return (
         <div className="lista-container">
+            {/* --- CABEÇALHO ATUALIZADO --- */}
             <header className="lista-header">
-                <h2>Lista de Espera</h2>
+                {/* Logo à esquerda (Clicável) */}
+                <Link to="/" className="header-logo-link">
+                    <img src={logoImg} alt="Voltar para Home" className="header-logo-img" />
+                </Link>
+
+                {/* Título Centralizado */}
+                <div className="header-content">
+                    <h2>Lista de Espera</h2>
+                    <p>Gerenciamento de solicitações pendentes</p>
+                </div>
             </header>
 
+            {/* Resto da tela continua igual... */}
             <div className="cards-row">
                 <div className="card-stat"><h3>{stats.total}</h3><p>Total</p></div>
                 <div className="card-stat"><h3>{stats.emEspera}</h3><p>Em espera</p></div>
@@ -76,7 +89,11 @@ function ListaDeEspera() {
                                     <td>{new Date(item.data_solicitacao).toLocaleDateString('pt-BR')}</td>
                                     <td>{item.tipo_quarto}</td>
                                     <td>{item.telefone}</td>
-                                    <td>{item.status}</td>
+                                    <td>
+                                        <span className={`status-badge ${item.status === 'Aguardando Confirmação' ? 'warn' : 'info'}`}>
+                                            {item.status}
+                                        </span>
+                                    </td>
                                     <td>
                                         <button className="btn-action btn-aprovar" onClick={() => handleAprovar(item.id)}>Aprovar</button>
                                         <button className="btn-action btn-remover" onClick={() => handleRemover(item.id)}>Remover</button>

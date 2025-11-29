@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
+import logoImg from './assets/logo.png'; // Importando a imagem
 
 // Mude para o link do Render se estiver testando online
 const API_URL = 'http://localhost:3001/api/dashboard'; 
@@ -11,6 +12,11 @@ function Home() {
     proximasChegadas: [],
     stats: { ocupacao: 0, leitosLivres: 0, pendentes: 0, hospedes: 0 }
   });
+
+  // Simulação de estado de login (Para teste, deixe null para ver o botão "Entrar")
+  // Depois, isso virá de um Contexto ou LocalStorage real
+  const [usuario, setUsuario] = useState(null); 
+  // const [usuario, setUsuario] = useState({ nome: 'Raquel' }); // Descomente para testar logado
 
   useEffect(() => {
     fetch(API_URL)
@@ -24,16 +30,29 @@ function Home() {
       {/* Cabeçalho Oficial */}
       <header className="dashboard-header">
         <div className="logo-area">
-            {/* Se tiver a imagem da logo, coloque aqui */}
-            <h2>Casa do Caminho</h2>
+            {/* Agora usamos a IMAGEM importada */}
+            <img src={logoImg} alt="Logo Casa do Caminho" className="logo-img" />
         </div>
+        
         <div className="search-area">
-          <input type="text" placeholder="Pesquisar..." />
+          <input type="text" placeholder="PESQUISA" />
           <span className="search-icon">🔍</span>
         </div>
+
+        {/* Lógica de Login: Mostra Botão ou Nome */}
         <div className="user-area">
-          <span>Olá, Raquel</span>
-          <div className="user-avatar">👤</div>
+          {usuario ? (
+            // SE ESTIVER LOGADO:
+            <>
+              <span className="user-name">Olá, {usuario.nome}</span>
+              <div className="user-avatar">👤</div>
+            </>
+          ) : (
+            // SE NÃO ESTIVER LOGADO (Padrão):
+            <Link to="/login" className="btn-login-header">
+              <span className="icon-login">🔒</span> ENTRAR
+            </Link>
+          )}
         </div>
       </header>
 
@@ -58,7 +77,7 @@ function Home() {
             </section>
         </div>
 
-        {/* Coluna 2: Mapa de Quartos (DADOS REAIS) */}
+        {/* Coluna 2: Mapa de Quartos */}
         <div className="col-map">
             <section className="card">
                 <h3>Mapa de Ocupação</h3>
@@ -74,7 +93,7 @@ function Home() {
             </section>
         </div>
 
-        {/* Coluna 3: Status e Chegadas (DADOS REAIS) */}
+        {/* Coluna 3: Status e Chegadas */}
         <div className="col-status">
             <section className="card status-grid-card">
                 <h3>Status Geral</h3>
