@@ -1,4 +1,43 @@
-/* Layout da Página */
+/* src/GestaoPermanencia.css */
+
+/* --- CABEÇALHO (Copiado da Lista de Espera) --- */
+.page-header {
+    background-color: #2EB6E8;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80px;
+    margin-bottom: 0;
+}
+
+.header-logo-link {
+    position: absolute;
+    left: 40px; /* Margem da esquerda */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s;
+}
+.header-logo-link:hover { transform: translateY(-50%) scale(1.1); }
+
+.header-logo-img {
+    height: 50px;
+    width: auto;
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.header-content h2 {
+    color: white;
+    font-size: 2rem;
+    margin: 0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* --- RESTANTE DA PÁGINA --- */
 .page-layout {
     background-color: #f8f9fa;
     min-height: 100vh;
@@ -8,28 +47,27 @@
 .permanencia-container {
     max-width: 1000px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 30px 20px;
 }
 
 .page-intro {
     text-align: center;
     margin-bottom: 30px;
 }
-.page-intro h2 { margin-bottom: 5px; color: #333; }
-.page-intro p { color: #666; margin-top: 0; }
+.page-intro p { color: #666; margin-top: 5px; }
 
 /* --- CARTÃO DO FORMULÁRIO --- */
 .form-card {
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: hidden; /* Para o header azul não vazar */
+    overflow: hidden;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     margin-bottom: 40px;
 }
 
 .form-header-blue {
-    background-color: #2EB6E8; /* Azul do Topo */
+    background-color: #2EB6E8;
     padding: 15px 25px;
     color: white;
 }
@@ -40,89 +78,43 @@
 /* Inputs e Labels */
 .group { margin-bottom: 15px; }
 .group label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 5px;
-    color: #444;
+    display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; color: #444;
 }
 .group input, .group textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 0.95rem;
-    background-color: #fcfcfc;
-    box-sizing: border-box;
+    width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 0.95rem; background-color: #fcfcfc; box-sizing: border-box;
 }
 .group input:focus, .group textarea:focus { outline: none; border-color: #2EB6E8; }
 
-.row-2 {
-    display: flex;
-    gap: 20px;
-}
+.row-2 { display: flex; gap: 20px; }
 .row-2 .group { flex: 1; }
 .half-width { width: 50%; }
 
-/* Botão Cadastrar (Largo e Azul) */
+/* Botão Cadastrar */
 .btn-submit-blue {
-    width: 100%;
-    background-color: #2EB6E8;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 5px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background 0.2s;
+    width: 100%; background-color: #2EB6E8; color: white; border: none; padding: 12px; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s;
 }
-.btn-submit-blue:hover { background-color: #1e87ad; }
+.btn-submit-blue:hover { background-color: #1e87ad; } /* Cor corrigida */
 
-/* --- LISTA DE CADASTROS --- */
+/* --- LISTA --- */
 .list-title { margin-bottom: 20px; color: #333; }
 
 .item-card {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
+    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px;
 }
-
-.patient-name {
-    margin: 0;
-    color: #2EB6E8;
-    font-size: 1.1rem;
-}
+.patient-name { margin: 0; color: #2EB6E8; font-size: 1.1rem; }
 
 .card-actions button {
-    background: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    margin-left: 10px;
+    background: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-left: 10px;
 }
 .btn-edit { border: 1px solid #2EB6E8; color: #2EB6E8; }
 .btn-delete { border: 1px solid #dc3545; color: #dc3545; }
 
 .card-body-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    margin-bottom: 15px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;
 }
 .card-body-grid small { color: #888; font-size: 0.8rem; display: block;}
 .card-body-grid p { margin: 3px 0 0 0; font-weight: 500; color: #333; }
@@ -132,10 +124,5 @@
 
 /* Footer */
 .page-footer {
-    text-align: center;
-    padding: 20px;
-    color: #999;
-    font-size: 0.85rem;
-    border-top: 1px solid #eee;
-    margin-top: 40px;
+    text-align: center; padding: 20px; color: #999; font-size: 0.85rem; border-top: 1px solid #eee; margin-top: 40px;
 }

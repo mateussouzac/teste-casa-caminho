@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header'; // Usando seu cabeçalho padrão
+import { Link } from 'react-router-dom';
 import './GestaoPermanencia.css';
+import logoImg from './assets/logo.png';
 
 // URL da API (Render)
 const API_URL = 'https://teste-casa-caminho.onrender.com/api/permanencias';
@@ -58,11 +59,18 @@ const GestaoPermanencia = () => {
 
   return (
     <div className="page-layout">
-      <Header title="Gestão de Permanências" />
-      
+      <header className="page-header">
+          <Link to="/" className="header-logo-link">
+              <img src={logoImg} alt="Voltar para Home" className="header-logo-img" />
+          </Link>
+          
+          <div className="header-content">
+              <h2>Gestão de Permanências</h2>
+          </div>
+      </header>
+
       <div className="permanencia-container">
         <div className="page-intro">
-            <h2>Gestão de Permanências</h2>
             <p>Sistema de controle e acompanhamento de permanências de pacientes</p>
         </div>
 
