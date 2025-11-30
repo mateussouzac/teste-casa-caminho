@@ -264,6 +264,52 @@ app.delete('/api/pacientes/:id', async (req, res) => {
 });
 //FIM PAULA BESSA
 
+/* ==================================================================
+   MÓDULO DE PERMANÊNCIAS Vitor
+   ================================================================== */
+
+// 1. LISTAR TODAS (GET)
+app.get('/api/permanencias', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute("SELECT * FROM permanencias ORDER BY id DESC");
+        await connection.end();
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. CADASTRAR NOVA PERMANÊNCIA (POST)
+app.post('/api/permanencias', async (req, res) => {
+    const { nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo } = req.body;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const sql = `INSERT INTO permanencias (nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo) 
+                     VALUES (?, ?, ?, ?, ?, ?)`;
+        
+        await connection.execute(sql, [nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo]);
+        await connection.end();
+        
+        res.status(201).json({ message: 'Permanência registrada com sucesso!' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. EXCLUIR PERMANÊNCIA (DELETE)
+app.delete('/api/permanencias/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute("DELETE FROM permanencias WHERE id = ?", [id]);
+        await connection.end();
+        res.json({ message: 'Registro excluído.' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 
