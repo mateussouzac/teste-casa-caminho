@@ -63,7 +63,7 @@ function Home() {
                     <Link to="/cadastro-paciente" className="btn-menu active">
                        CADASTRO PACIENTE
                    </Link>
-                    <Link to="/nova-solicitacao" className="btn-menu active">
+                    <Link to="/permanencia" className="btn-menu active">
                         NOVA SOLICITAÇÃO
                     </Link>
                     <Link to="/alta" className="btn-menu active">
