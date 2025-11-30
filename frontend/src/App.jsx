@@ -1,22 +1,67 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// Importando as páginas
 import Home from './Home';
 import ListaDeEspera from './ListaDeEspera';
 import CadastroPaciente from './CadastroPaciente';
 import GestaoPermanencia from './GestaoPermanencia';
 import AnaliseDados from './AnaliseDados';
+import Login from './Login';
+
+// --- COMPONENTE DE PROTEÇÃO (O SEGURANÇA) ---
+const RotaProtegida = ({ children }) => {
+  // Verifica se tem um usuário salvo no navegador
+  const usuarioLogado = localStorage.getItem('user');
+  
+  // Se NÃO tiver usuário, manda pro Login
+  if (!usuarioLogado) {
+    return <Navigate to="/login" />;
+  }
+
+  // Se tiver, mostra a página que foi pedida (Home, Lista, etc.)
+  return children;
+};
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/lista-espera" element={<ListaDeEspera />} />
-        <Route path="/cadastro-paciente" element={<CadastroPaciente />} />
-        <Route path="/permanencia" element={<GestaoPermanencia />} />
-        <Route path="/analise" element={<AnaliseDados />} />
+        {/* --- ROTA PÚBLICA (Qualquer um acessa) --- */}
+        <Route path="/login" element={<Login />} />
+
+        {/* --- ROTAS PRIVADAS (Só logado acessa) --- */}
+        <Route path="/" element={
+          <RotaProtegida>
+            <Home />
+          </RotaProtegida>
+        } />
+
+        <Route path="/lista-espera" element={
+          <RotaProtegida>
+            <ListaDeEspera />
+          </RotaProtegida>
+        } />
+
+        <Route path="/cadastro-paciente" element={
+          <RotaProtegida>
+            <CadastroPaciente />
+          </RotaProtegida>
+        } />
+
+        <Route path="/permanencia" element={
+          <RotaProtegida>
+            <GestaoPermanencia />
+          </RotaProtegida>
+        } />
+
+        <Route path="/analise" element={
+          <RotaProtegida>
+            <AnaliseDados />
+          </RotaProtegida>
+        } />
+
       </Routes>
-      
     </BrowserRouter>
   );
 }

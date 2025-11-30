@@ -1,29 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Adicionei useNavigate
 import './Home.css';
 import logoImg from './assets/logo.png'; 
 
-// URL da API (Se estiver rodando local, mude para http://localhost:3001/api/dashboard)
+// URL da API (Render)
 const API_URL = 'https://teste-casa-caminho.onrender.com/api/dashboard';
 
 function Home() {
-  // Estado para armazenar os dados da dashboard
+  const navigate = useNavigate();
+
   const [data, setData] = useState({
     quartos: [],
     proximasChegadas: [],
     stats: { ocupacao: 0, leitosLivres: 0, pendentes: 0, hospedes: 0 }
   });
 
-  // Estado simples de usuário (pode ser expandido depois)
   const [usuario, setUsuario] = useState(null); 
 
-  // Busca os dados ao carregar a página
+  // 1. VERIFICA SE ESTÁ LOGADO AO ABRIR A PÁGINA
   useEffect(() => {
+    // Busca dados da dashboard
     fetch(API_URL)
       .then(res => res.json())
       .then(dados => setData(dados))
       .catch(err => console.error("Erro ao carregar dashboard:", err));
+
+    // Busca usuário salvo no LocalStorage (Login)
+    const usuarioSalvo = localStorage.getItem('user');
+    if (usuarioSalvo) {
+      setUsuario(JSON.parse(usuarioSalvo));
+    }
   }, []);
+
+  // 2. FUNÇÃO DE SAIR (LOGOUT)
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setUsuario(null);
+    navigate('/login'); // Manda de volta pro login
+  };
 
   return (
     <div className="dashboard-container">
@@ -38,13 +53,20 @@ function Home() {
           <span className="search-icon">🔍</span>
         </div>
 
+        {/* --- LÓGICA DO USUÁRIO --- */}
         <div className="user-area">
           {usuario ? (
-            <>
-              <span className="user-name">Olá, {usuario.nome}</span>
+            // SE ESTIVER LOGADO:
+            <div className="logged-user-info">
+              <div className="user-details">
+                <span className="user-name">Olá, {usuario.nome}</span>
+                {/* Botão de Sair pequeno */}
+                <button onClick={handleLogout} className="btn-logout-small">Sair</button>
+              </div>
               <div className="user-avatar">👤</div>
-            </>
+            </div>
           ) : (
+            // SE NÃO ESTIVER LOGADO:
             <Link to="/login" className="btn-login-header">
               <span className="icon-login">🔒</span> ENTRAR
             </Link>
@@ -52,21 +74,21 @@ function Home() {
         </div>
       </header>
 
-      {/* --- CONTEÚDO PRINCIPAL --- */}
+      {/* --- CONTEÚDO PRINCIPAL (Igual ao anterior) --- */}
       <main className="dashboard-main">
         
-        {/* COLUNA 1: Ações e Gráfico */}
+        {/* Coluna 1: Ações e Gráfico */}
         <div className="col-actions">
             <section className="card actions-card">
                 <h3>Ações Rápidas</h3>
                 <div className="buttons-stack">
                     <Link to="/cadastro-paciente" className="btn-menu active">
-                       CADASTRO PACIENTE
-                   </Link>
+                        CADASTRO PACIENTE
+                    </Link>
                     <Link to="/permanencia" className="btn-menu active">
                         NOVA SOLICITAÇÃO
                     </Link>
-                    <Link to="/alta" className="btn-menu active">
+                    <Link to="/alta" className="btn-menu disabled">
                         REGISTRAR SAÍDA / ALTA
                     </Link>
                     <Link to="/lista-espera" className="btn-menu active">
@@ -84,7 +106,7 @@ function Home() {
             </section>
         </div>
 
-        {/* COLUNA 2: Mapa de Quartos */}
+        {/* Coluna 2: Mapa de Quartos */}
         <div className="col-map">
             <section className="card">
                 <h3>Mapa de Ocupação</h3>
@@ -100,7 +122,7 @@ function Home() {
             </section>
         </div>
 
-        {/* COLUNA 3: Status e Chegadas */}
+        {/* Coluna 3: Status e Chegadas */}
         <div className="col-status">
             <section className="card status-grid-card">
                 <h3>Status Geral</h3>
