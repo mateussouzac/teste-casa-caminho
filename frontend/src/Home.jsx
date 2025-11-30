@@ -88,8 +88,8 @@ function Home() {
                     <Link to="/permanencia" className="btn-menu active">
                         NOVA SOLICITAÇÃO
                     </Link>
-                    <Link to="/alta" className="btn-menu disabled">
-                        REGISTRAR SAÍDA / ALTA
+                    <Link to="/cadastro-quarto" className="btn-menu active">
+                        CADASTRO DE QUARTO
                     </Link>
                     <Link to="/lista-espera" className="btn-menu active">
                         VER LISTA DE ESPERA

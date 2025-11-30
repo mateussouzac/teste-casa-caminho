@@ -356,6 +356,115 @@ app.post('/api/auth/login', async (req, res) => {
         res.json({ token, user: { id: user.id_usuario, nome: user.nome, email: user.email, papel: user.papel } });
     } catch (error) { res.status(500).json({ error: "Erro no servidor." }); }
 });
+//MODULO DE QUARTOS - GABRIEL
+
+// 1. LISTAR TODOS OS QUARTOS (GET)
+app.get('/api/rooms', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        // Busca todos os quartos ordenados pelo número (A1, A2, B1...)
+        const [rows] = await connection.execute("SELECT * FROM quarto ORDER BY numero");
+        await connection.end();
+        
+        // Mapeia para o formato que o front dele espera (id, number, type, status)
+        const quartosFormatados = rows.map(row => ({
+            id: row.id_quarto,
+            number: row.numero, // Usa a coluna 'numero' real do banco
+            type: row.tipo_quarto || row.tipo, // Tenta os dois nomes por garantia
+            status: row.status_ocupacao
+        }));
+        
+        res.json(quartosFormatados);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao listar quartos" });
+    }
+});
+
+// 2. CRIAR QUARTO (POST)
+// Espera receber: { number: "A1", type: "Único", status: "Livre" }
+app.post('/api/rooms', async (req, res) => {
+    const { number, type, status } = req.body;
+
+    if (!number || !type) {
+        return res.status(400).json({ error: "Número e Tipo são obrigatórios." });
+    }
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        
+        // Insere na tabela 'quarto' usando as colunas corretas
+        // status padrão = 'Livre' se não vier nada
+        const [result] = await connection.execute(
+            "INSERT INTO quarto (numero, tipo_quarto, status_ocupacao) VALUES (?, ?, ?)",
+            [number, type, status || 'Livre']
+        );
+        
+        await connection.end();
+        
+        res.status(201).json({ 
+            id: result.insertId,
+            number, 
+            type, 
+            status: status || 'Livre'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao criar quarto." });
+    }
+});
+
+// 3. ATUALIZAR QUARTO (PUT)
+app.put('/api/rooms/:id', async (req, res) => {
+    const { id } = req.params;
+    const { number, type, status } = req.body; // Aceita atualizar número também
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        
+        // Constrói a query dinamicamente (só atualiza o que foi enviado)
+        // Isso é uma versão simplificada da lógica do seu colega, mas mais direta
+        let campos = [];
+        let valores = [];
+
+        if (number) { campos.push("numero = ?"); valores.push(number); }
+        if (type) { campos.push("tipo_quarto = ?"); valores.push(type); }
+        if (status) { campos.push("status_ocupacao = ?"); valores.push(status); }
+
+        if (campos.length === 0) return res.json({ message: "Nada a atualizar" });
+
+        valores.push(id); // Adiciona o ID no final para o WHERE
+
+        await connection.execute(
+            `UPDATE quarto SET ${campos.join(", ")} WHERE id_quarto = ?`,
+            valores
+        );
+        
+        await connection.end();
+        res.json({ message: "Quarto atualizado com sucesso" });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao atualizar quarto" });
+    }
+});
+
+// 4. REMOVER QUARTO (DELETE)
+app.delete('/api/rooms/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [result] = await connection.execute("DELETE FROM quarto WHERE id_quarto = ?", [id]);
+        await connection.end();
+
+        if (result.affectedRows === 0) return res.status(404).json({ error: "Quarto não encontrado" });
+        
+        res.json({ ok: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao remover quarto" });
+    }
+});
 
 // ==================================================================
 // FIM GABRIEL

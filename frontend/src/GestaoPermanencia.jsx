@@ -43,7 +43,7 @@ const GestaoPermanencia = () => {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        alert("Permanência cadastrada!");
+        alert("Solicitação cadastrada!");
         setFormData({ nome_paciente: '', telefone_contato: '', nome_acompanhante: '', data_entrada: '', duracao_dias: '', motivo: '' });
         fetchLista();
       }
@@ -65,19 +65,19 @@ const GestaoPermanencia = () => {
           </Link>
           
           <div className="header-content">
-              <h2>Gestão de Permanências</h2>
+              <h2>Nova Solicitação</h2>
           </div>
       </header>
 
       <div className="permanencia-container">
         <div className="page-intro">
-            <p>Sistema de controle e acompanhamento de permanências de pacientes</p>
+            <p>Fazer nova Solicitação</p>
         </div>
 
         {/* --- FORMULÁRIO --- */}
         <div className="form-card">
             <div className="form-header-blue">
-                <h3>Nova Permanência</h3>
+                <h3>Nova solicitação</h3>
             </div>
             <form onSubmit={handleSubmit} className="p-form">
                 <div className="row-2">
@@ -117,7 +117,7 @@ const GestaoPermanencia = () => {
         </div>
 
         {/* --- LISTA --- */}
-        <h3 className="list-title">Permanências Cadastradas ({lista.length})</h3>
+        <h3 className="list-title">Solicitações Cadastradas ({lista.length})</h3>
         
         <div className="list-container">
             {lista.map(item => (
