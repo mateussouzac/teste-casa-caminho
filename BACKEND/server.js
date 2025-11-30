@@ -309,6 +309,82 @@ app.delete('/api/permanencias/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// FIM VITOR
+/* ==================================================================
+   MÓDULO DE ANÁLISE DE DADOS VITOR
+   ================================================================== */
+
+app.get('/api/analise', async (req, res) => {
+    // Pega as datas do filtro da URL (ex: /api/analise?inicio=2025-11-01&fim=2025-11-30)
+    let { inicio, fim } = req.query;
+
+    // Se não vier data, define um período padrão (ex: último mês) ou usa datas bem amplas
+    if (!inicio || !fim) {
+        // Para este exemplo, vamos usar datas "fixas" amplas se não vier filtro
+        // Em produção, você calcularia o primeiro e último dia do mês atual
+        inicio = '2000-01-01'; 
+        fim = '2100-12-31';
+    }
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+
+        // --- QUERIES PARA AS MÉTRICAS ---
+
+        // 1. Solicitações Recebidas (Total no período)
+        const [recebidas] = await connection.execute(
+            `SELECT COUNT(*) as total FROM solicitacao WHERE data_solicitacao BETWEEN ? AND ?`,
+            [inicio, fim]
+        );
+
+        // 2. Acolhimentos (Status 'Aprovado' ou 'Concluído')
+        const [acolhimentos] = await connection.execute(
+            `SELECT COUNT(*) as total FROM solicitacao WHERE status IN ('Aprovado', 'Concluído') AND data_solicitacao BETWEEN ? AND ?`,
+            [inicio, fim]
+        );
+
+        // 3. Altas Realizadas (Supondo que temos uma tabela de 'altas' ou status 'Concluído')
+        // Se não tiver tabela de alta, podemos usar o status 'Concluído' da solicitação como exemplo
+        const [altas] = await connection.execute(
+            `SELECT COUNT(*) as total FROM solicitacao WHERE status = 'Concluído' AND data_solicitacao BETWEEN ? AND ?`,
+            [inicio, fim]
+        );
+
+        // 4. Taxa de Ocupação (Esta métrica é do momento ATUAL, não depende do período)
+        const [quartos] = await connection.execute("SELECT status_ocupacao FROM quarto");
+        const totalQuartos = quartos.length;
+        const ocupados = quartos.filter(q => q.status_ocupacao === 'Ocupado').length;
+        const taxaOcupacao = totalQuartos > 0 ? Math.round((ocupados / totalQuartos) * 100) : 0;
+
+        // --- QUERY PARA A TABELA DETALHADA (Exemplo com as 5 últimas do período) ---
+        const [detalhes] = await connection.execute(`
+            SELECT p.nome, s.data_solicitacao, s.status
+            FROM solicitacao s
+            JOIN paciente p ON s.id_paciente = p.id_paciente
+            WHERE s.data_solicitacao BETWEEN ? AND ?
+            ORDER BY s.data_solicitacao DESC
+            LIMIT 5
+        `, [inicio, fim]);
+
+        await connection.end();
+
+        // Monta o JSON de resposta
+        res.json({
+            metricas: {
+                recebidas: recebidas[0].total,
+                acolhimentos: acolhimentos[0].total,
+                altas: altas[0].total,
+                ocupacao: taxaOcupacao
+            },
+            tabelaDetalhada: detalhes
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao buscar dados de análise" });
+    }
+});
+// FIM VITOR
 
 
 
