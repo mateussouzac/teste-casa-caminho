@@ -415,25 +415,55 @@ app.post('/api/rooms', async (req, res) => {
 });
 
 // 3. ATUALIZAR QUARTO (PUT)
-app.put('/api/rooms/:id', async (req, res) => {
-    const { id } = req.params;
-    const { number, type, status } = req.body; // Aceita atualizar número também
+app.post('/api/rooms', async (req, res) => {
+    const { number, type, status } = req.body;
+
+    if (!number || !type) {
+        return res.status(400).json({ error: "Número e Tipo são obrigatórios." });
+    }
 
     try {
         const connection = await mysql.createConnection(dbConfig);
         
-        // Constrói a query dinamicamente (só atualiza o que foi enviado)
-        // Isso é uma versão simplificada da lógica do seu colega, mas mais direta
+        // CORREÇÃO AQUI: Mudamos 'tipo_quarto' para 'tipo'
+        const [result] = await connection.execute(
+            "INSERT INTO quarto (numero, tipo, status_ocupacao) VALUES (?, ?, ?)",
+            [number, type, status || 'Livre']
+        );
+        
+        await connection.end();
+        
+        res.status(201).json({ 
+            id: result.insertId,
+            number, 
+            type, 
+            status: status || 'Livre'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao criar quarto: " + err.message });
+    }
+});
+
+// 3. ATUALIZAR QUARTO (PUT) - CORRIGIDO
+app.put('/api/rooms/:id', async (req, res) => {
+    const { id } = req.params;
+    const { number, type, status } = req.body; 
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        
         let campos = [];
         let valores = [];
 
         if (number) { campos.push("numero = ?"); valores.push(number); }
-        if (type) { campos.push("tipo_quarto = ?"); valores.push(type); }
+        // CORREÇÃO AQUI: Mudamos 'tipo_quarto' para 'tipo'
+        if (type) { campos.push("tipo = ?"); valores.push(type); } 
         if (status) { campos.push("status_ocupacao = ?"); valores.push(status); }
 
         if (campos.length === 0) return res.json({ message: "Nada a atualizar" });
 
-        valores.push(id); // Adiciona o ID no final para o WHERE
+        valores.push(id); 
 
         await connection.execute(
             `UPDATE quarto SET ${campos.join(", ")} WHERE id_quarto = ?`,
