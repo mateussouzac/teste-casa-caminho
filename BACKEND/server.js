@@ -15,7 +15,7 @@ const axios = require("axios");
 async function enviarWhatsApp(telefone, mensagem) {
     try {
         await axios.post(
-            `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE}/token/${process.env.ZAPI_TOKEN}/send-text`,
+            `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE}/DCCC27592B4815E1BE9D1A17/${process.env.ZAPI_TOKEN}/send-text`,
             {
                 phone: telefone,
                 message: mensagem
@@ -638,6 +638,7 @@ app.get("/api/quartos/disponiveis", async (req, res) => {
 
 app.post("/api/lista-espera/:id/alocar", async (req, res) => {
     const { id } = req.params;
+    const connection = await mysql.createConnection(dbConfig);
 
     try {
         // Buscar paciente da lista
