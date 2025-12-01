@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import './ListaDeEspera.css';
 import logoImg from './assets/logo.png'; // Reutilizando a logo que você já tem
-import { Link } from 'react-router-dom';
+
 
 // URL da API (Render)
 
