@@ -27,15 +27,28 @@ const CadastroPaciente = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Removemos o campo 'id_quarto' e 'condicao' pois simplificamos o envio
+      // enviamos apenas os dados pessoais
+      const dadosParaEnviar = {
+          nome: formData.nome,
+          data_nascimento: formData.data_nascimento,
+          cidade: formData.cidade,
+          diagnostico: formData.diagnostico,
+          telefone: formData.telefone,
+          observacoes: formData.observacoes
+      };
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dadosParaEnviar),
       });
 
       if (response.ok) {
-        alert('Paciente cadastrado com sucesso!');
-        navigate('/lista-espera');
+        alert('Paciente cadastrado! Redirecionando para Nova Solicitação...');
+      
+        navigate('/permanencia'); 
+        
       } else {
         alert('Erro ao cadastrar paciente.');
       }
