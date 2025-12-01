@@ -156,46 +156,32 @@ app.get('/api/pacientes/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ erro: "Erro ao buscar paciente" }); }
 });
 
-// Cadastrar Paciente (Completo: Paciente + Solicitação + Lista)
+// Cadastra Paciente
 app.post('/api/pacientes', async (req, res) => {
-    const { nome, telefone, data_nascimento, cidade, condicao, diagnostico, observacoes, id_quarto } = req.body;
-    const obsFinal = condicao ? `${observacoes || ''} | Condição: ${condicao}` : observacoes;
-    const connection = await mysql.createConnection(dbConfig);
+    const { nome, telefone, data_nascimento, cidade, diagnostico, observacoes } = req.body;
+    
     try {
-        await connection.beginTransaction();
+        const connection = await mysql.createConnection(dbConfig);
         
-        // 1. Cria Paciente
-        const [pacienteResult] = await connection.execute(
-            `INSERT INTO paciente (nome, telefone, data_nascimento, cidade, diagnostico, observacoes) VALUES (?, ?, ?, ?, ?, ?)`,
-            [nome, telefone, data_nascimento, cidade, diagnostico, obsFinal]
+        // Apenas insere na tabela PACIENTE
+        const [result] = await connection.execute(
+            `INSERT INTO paciente (nome, telefone, data_nascimento, cidade, diagnostico, observacoes)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [nome, telefone, data_nascimento, cidade, diagnostico, observacoes]
         );
-        const idPaciente = pacienteResult.insertId;
+        
+        await connection.end();
+        
+        // Retorna sucesso e o ID do novo paciente
+        res.status(201).json({ 
+            message: 'Paciente cadastrado com sucesso!', 
+            id: result.insertId 
+        });
 
-        // 2. Se escolheu quarto, ocupa ele
-        let statusInicial = 'Em espera';
-        if (id_quarto) {
-            statusInicial = 'Aguardando Confirmação';
-            await connection.execute(`UPDATE quarto SET id_paciente = ?, status_ocupacao = 'Ocupado' WHERE id_quarto = ?`, [idPaciente, id_quarto]);
-        }
-
-        // 3. Cria Solicitação e Lista
-        const dataHoje = new Date().toISOString().split('T')[0];
-        const [solicResult] = await connection.execute(
-            `INSERT INTO solicitacao (id_paciente, id_usuario, data_solicitacao, status) VALUES (?, 1, ?, ?)`,
-            [idPaciente, dataHoje, statusInicial]
-        );
-        await connection.execute(
-            `INSERT INTO lista_espera (id_solicitacao, data_entrada, status_espera) VALUES (?, ?, ?)`,
-            [solicResult.insertId, dataHoje, statusInicial]
-        );
-
-        await connection.commit();
-        res.status(201).json({ message: 'Salvo com sucesso!' });
     } catch (err) {
-        await connection.rollback();
         console.error("Erro no cadastro:", err);
-        res.status(500).json({ erro: "Erro ao criar paciente e solicitação" });
-    } finally { await connection.end(); }
+        res.status(500).json({ error: "Erro ao cadastrar paciente: " + err.message });
+    }
 });
 
 // Atualizar Paciente
