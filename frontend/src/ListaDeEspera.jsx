@@ -5,6 +5,7 @@ import logoImg from './assets/logo.png'; // Reutilizando a logo que você já te
 
 
 // URL da API (Render)
+const API_URL = "https://teste-casa-caminho.onrender.com/api/lista-espera";
 
 function ListaDeEspera() {
     const [lista, setLista] = useState([]);
