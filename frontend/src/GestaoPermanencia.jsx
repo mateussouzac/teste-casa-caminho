@@ -1,17 +1,18 @@
-// frontend/src/GestaoPermanencia.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './GestaoPermanencia.css';
 import logoImg from './assets/logo.png';
 
-// Base API (prod / render)
+// URL Base da API (Render)
 const BASE = 'https://teste-casa-caminho.onrender.com';
 
 const GestaoPermanencia = () => {
-  const [lista, setLista] = useState([]); // solicitações cadastradas (mantive)
+  // Estados para armazenar dados do banco
+  const [lista, setLista] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [quartosLivres, setQuartosLivres] = useState([]);
-  const [alocacoesAtivas, setAlocacoesAtivas] = useState([]); // opcional, caso queira mostrar alocados
+  
+  // Estado do Formulário
   const [formData, setFormData] = useState({
     id_paciente: '',
     telefone_contato: '',
@@ -19,35 +20,35 @@ const GestaoPermanencia = () => {
     data_entrada: '',
     duracao_dias: '',
     motivo: '',
-    id_quarto: '' // novo campo
+    id_quarto: '' // Campo opcional
   });
+  
   const [msg, setMsg] = useState('');
 
+  // Carregar dados ao abrir a tela
   useEffect(() => {
     carregarDadosIniciais();
   }, []);
 
   async function carregarDadosIniciais() {
     try {
-      // solicitações (mantém seu comportamento atual)
+      // Busca tudo ao mesmo tempo para ser rápido
       const [resPermanencias, resPacientes, resQuartos] = await Promise.all([
         fetch(`${BASE}/api/permanencias`).then(r => r.json()),
         fetch(`${BASE}/api/pacientes`).then(r => r.json()),
         fetch(`${BASE}/api/quartos-livres`).then(r => r.json())
       ]);
+
       setLista(resPermanencias || []);
       setPacientes(resPacientes || []);
       setQuartosLivres(resQuartos || []);
-      // também buscar alocações caso o backend tenha (opcional)
-      const alocRes = await fetch(`${BASE}/api/alocacoes`).then(r => r.json()).catch(()=>[]);
-      setAlocacoesAtivas((alocRes||[]).filter(a=>a.status === 'ATIVO'));
     } catch (err) {
-      console.error("Erro carregar dados:", err);
-      setMsg("Erro ao carregar dados. Veja o console.");
+      console.error("Erro ao carregar dados:", err);
+      setMsg("Erro de conexão com o servidor.");
     }
   }
 
-  // quando selecionar paciente, preenche telefone automaticamente
+  // Atualiza formulário e preenche telefone automaticamente ao escolher paciente
   function handleChange(e) {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -62,23 +63,31 @@ const GestaoPermanencia = () => {
     }
   }
 
-  // função principal: cria permanência (ou entra na lista de espera)
+  // --- FUNÇÃO PRINCIPAL: SALVAR ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMsg('');
 
-    // validações simples
-    if (!formData.id_paciente) { setMsg('Selecione um paciente'); return; }
-    if (!formData.data_entrada) { setMsg('Informe a data de entrada'); return; }
+    if (!formData.id_paciente) { alert('Selecione um paciente'); return; }
+    if (!formData.data_entrada) { alert('Informe a data de entrada'); return; }
 
     try {
-      // 1) Verifica se há quarto selecionado / ou há quartos livres (se usuário não selecionou)
-      let quartoEscolhido = formData.id_quarto || (quartosLivres[0] && quartosLivres[0].id);
+      // 1. TENTA ALOCAR UM QUARTO
+      // Se o usuário escolheu um quarto, usa ele. 
+      // Se não escolheu, mas tem quartos livres na lista, pega o primeiro.
+      let quartoParaAlocar = formData.id_quarto;
+      
+      if (!quartoParaAlocar && quartosLivres.length > 0) {
+         // Pega o ID do primeiro quarto livre (tratando variação de nome id ou id_quarto)
+         quartoParaAlocar = quartosLivres[0].id_quarto || quartosLivres[0].id;
+      }
 
-      if (quartoEscolhido) {
-        // Se existe quarto: cria permanência e ocupa quarto
+      // --- CENÁRIO A: TEM QUARTO DISPONÍVEL -> CRIA PERMANÊNCIA ---
+      if (quartoParaAlocar) {
+        const pacienteSelecionado = pacientes.find(p => String(p.id_paciente) === String(formData.id_paciente));
+
         const payload = {
-          nome_paciente: pacientes.find(p=>p.id_paciente === Number(formData.id_paciente))?.nome || '',
+          nome_paciente: pacienteSelecionado ? pacienteSelecionado.nome : 'Paciente',
           telefone_contato: formData.telefone_contato,
           nome_acompanhante: formData.nome_acompanhante,
           data_entrada: formData.data_entrada,
@@ -86,33 +95,28 @@ const GestaoPermanencia = () => {
           motivo: formData.motivo
         };
 
-        const res = await fetch(`${BASE}/api/permanencias`, {
+        // 1. Cria registro na tabela permanencia
+        const resPerm = await fetch(`${BASE}/api/permanencias`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(()=>({}));
-          throw new Error(data.error || data.erro || 'Erro ao criar permanência');
-        }
+        if (!resPerm.ok) throw new Error('Erro ao criar permanência');
 
-        // marca quarto como ocupado informando o id do paciente (usa rota nova PUT /api/quartos/:id/ocupar)
-        await fetch(`${BASE}/api/quartos/${quartoEscolhido}/ocupar`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_paciente: formData.id_paciente })
+        // 2. Atualiza o status do quarto para 'Ocupado'
+        await fetch(`${BASE}/api/quartos/${quartoParaAlocar}/ocupar`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_paciente: formData.id_paciente })
         });
 
-        alert('Permanência cadastrada e quarto ocupado com sucesso!');
-        // limpar e recarregar
-        setFormData({ id_paciente: '', telefone_contato: '', nome_acompanhante: '', data_entrada: '', duracao_dias: '', motivo: '', id_quarto: '' });
-        carregarDadosIniciais();
-        return;
+        alert(`✅ Sucesso! Paciente alocado no quarto.`);
+      
       } else {
-        // Sem quarto disponível -> registrar na lista de espera
-        // A rota POST /api/lista-espera que vamos adicionar aceita: { id_paciente, data_entrada, status_espera }
-        const res = await fetch(`${BASE}/api/lista-espera`, {
+        // --- CENÁRIO B: NÃO TEM QUARTO (OU ESTÃO TODOS OCUPADOS) -> VAI PARA FILA ---
+        
+        const resLista = await fetch(`${BASE}/api/lista-espera`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -122,47 +126,35 @@ const GestaoPermanencia = () => {
           })
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(()=>({}));
-          throw new Error(data.error || data.erro || 'Erro ao inserir na lista de espera');
-        }
+        if (!resLista.ok) throw new Error('Erro ao inserir na lista de espera');
 
-        alert('Sem quartos livres. Paciente enviado para a Lista de Espera.');
-        setFormData({ id_paciente: '', telefone_contato: '', nome_acompanhante: '', data_entrada: '', duracao_dias: '', motivo: '', id_quarto: '' });
-        carregarDadosIniciais();
-        return;
+        alert('⚠️ Sem quartos livres no momento. Paciente enviado para a LISTA DE ESPERA.');
       }
 
+      // Limpeza e Atualização
+      setFormData({
+        id_paciente: '', telefone_contato: '', nome_acompanhante: '',
+        data_entrada: '', duracao_dias: '', motivo: '', id_quarto: ''
+      });
+      carregarDadosIniciais();
+
     } catch (err) {
-      console.error("Erro ao processar:", err);
-      alert(err.message || 'Erro no envio');
+      console.error("Erro:", err);
+      alert("Ocorreu um erro ao processar a solicitação.");
     }
   };
 
-  // excluir solicitação (mesmo comportamento anterior)
+  // Excluir Permanência
   const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza que deseja excluir?")) return;
+    if (!window.confirm("Tem certeza que deseja excluir este registro?")) return;
     await fetch(`${BASE}/api/permanencias/${id}`, { method: 'DELETE' }).catch(()=>{});
     carregarDadosIniciais();
   };
 
-  // Função para dar alta em um alocado (usa rota /api/alocacoes/:id/alta se disponível)
-  // Aqui, como optou por manter permanencia como storage (1-A), vamos apenas liberar quarto via /api/quartos/:id/ocupar?status=Livre ou criar rota para liberar
-  const darAltaEAtualizarQuarto = async (idQuarto) => {
-    if (!window.confirm('Confirmar alta e liberar quarto?')) return;
-    try {
-      // chamamos rota que libera quarto
-      await fetch(`${BASE}/api/quartos/${idQuarto}/liberar`, { method: 'PUT' });
-      alert('Alta registrada e quarto liberado.');
-      carregarDadosIniciais();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao dar alta');
-    }
-  };
-
   return (
     <div className="page-layout">
+      
+      {/* --- CABEÇALHO PADRÃO --- */}
       <header className="page-header">
           <Link to="/" className="header-logo-link">
               <img src={logoImg} alt="Voltar para Home" className="header-logo-img" />
@@ -175,14 +167,13 @@ const GestaoPermanencia = () => {
 
       <div className="permanencia-container">
         <div className="page-intro">
-            <p>Fazer nova Solicitação — selecione um paciente existente para não digitar novamente</p>
-            {msg && <p style={{color:'red'}}>{msg}</p>}
+            <p>Fazer nova Solicitação — O sistema tentará alocar um quarto automaticamente. Se não houver vaga, irá para a Lista de Espera.</p>
         </div>
 
-        {/* --- FORMULÁRIO Atualizado --- */}
+        {/* --- FORMULÁRIO --- */}
         <div className="form-card">
             <div className="form-header-blue">
-                <h3>Nova solicitação / Alocação</h3>
+                <h3>Nova Solicitação</h3>
             </div>
             <form onSubmit={handleSubmit} className="p-form">
                 <div className="row-2">
@@ -222,12 +213,12 @@ const GestaoPermanencia = () => {
                   </div>
 
                   <div className="group half-width">
-                    <label>Quarto (opcional — se deixar vazio será usado o primeiro quarto livre)</label>
+                    <label>Quarto Preferencial (Opcional)</label>
                     <select name="id_quarto" value={formData.id_quarto} onChange={handleChange}>
-                      <option value="">— usar primeiro quarto livre —</option>
+                      <option value="">— Qualquer quarto livre —</option>
                       {quartosLivres.map(q => (
                         <option key={q.id_quarto || q.id} value={q.id_quarto || q.id}>
-                          { (q.numero || q.number) } — { (q.tipo_quarto || q.type) } — { (q.status_ocupacao || q.status) }
+                          { (q.numero || q.number) } — { (q.tipo_quarto || q.type) }
                         </option>
                       ))}
                     </select>
@@ -239,12 +230,12 @@ const GestaoPermanencia = () => {
                     <textarea name="motivo" value={formData.motivo} onChange={handleChange} placeholder="Descreva o motivo da permanência" rows="3" required></textarea>
                 </div>
 
-                <button type="submit" className="btn-submit-blue">Cadastrar / Alocar</button>
+                <button type="submit" className="btn-submit-blue">Confirmar Solicitação</button>
             </form>
         </div>
 
-        {/* --- LISTA (mantida como está) --- */}
-        <h3 className="list-title">Solicitações Cadastradas ({lista.length})</h3>
+        {/* --- LISTA DE PERMANÊNCIAS ATIVAS --- */}
+        <h3 className="list-title">Permanências Ativas ({lista.length})</h3>
         
         <div className="list-container">
             {lista.map(item => (
@@ -252,8 +243,7 @@ const GestaoPermanencia = () => {
                     <div className="card-header">
                         <h4 className="patient-name">👤 {item.nome_paciente}</h4>
                         <div className="card-actions">
-                            <button className="btn-edit">✏️ Editar</button>
-                            <button className="btn-delete" onClick={() => handleDelete(item.id)}>🗑️ Excluir</button>
+                            <button className="btn-delete" onClick={() => handleDelete(item.id)}>Encerrar/Excluir</button>
                         </div>
                     </div>
                     
@@ -267,17 +257,16 @@ const GestaoPermanencia = () => {
                             <p>{item.nome_acompanhante || '-'}</p>
                         </div>
                         <div>
-                            <small>📅 Data de Entrada</small>
+                            <small>📅 Entrada</small>
                             <p>{new Date(item.data_entrada).toLocaleDateString('pt-BR')}</p>
                         </div>
                         <div>
-                            <small>⏱️ Duração</small>
+                            <small>⏱️ Previsão</small>
                             <p>{item.duracao_dias} dias</p>
                         </div>
                     </div>
                     <div className="card-footer">
-                        <small>📄 Motivo</small>
-                        <p>{item.motivo}</p>
+                        <small>📄 Motivo: {item.motivo}</small>
                     </div>
                 </div>
             ))}
