@@ -178,3 +178,48 @@ td {
 .btn-remover:hover {
     background-color: #fff0f0;
 }
+/* --- RESPONSIVIDADE PARA TABELAS --- */
+@media (max-width: 768px) {
+    
+    /* Ajuste do Container e Header */
+    .lista-container, .quarto-container, .permanencia-container {
+        padding: 15px; /* Menos padding */
+        width: 100%;
+    }
+
+    .lista-header, .page-header {
+        flex-direction: column;
+        height: auto;
+        padding: 20px 0;
+        gap: 15px;
+    }
+
+    .header-logo-link {
+        position: static; /* Remove a posição absoluta no mobile */
+        transform: none;
+        margin-bottom: 10px;
+    }
+
+    .header-content h2 {
+        font-size: 1.8rem;
+    }
+
+    /* Cards de Status (Total, Em espera...) empilhados */
+    .cards-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* TABELA COM SCROLL HORIZONTAL */
+    .tabela-wrapper, .overflow-x-auto {
+        overflow-x: auto; /* Cria barra de rolagem se precisar */
+        display: block;
+        white-space: nowrap; /* Evita que o texto quebre linhas estranhas */
+    }
+
+    /* Ajuste de Botões na Tabela */
+    .btn-action {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+}

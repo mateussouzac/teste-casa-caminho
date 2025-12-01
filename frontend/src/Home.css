@@ -356,3 +356,45 @@
 .btn-logout-small:hover {
     color: #FFD700; /* Fica amarelo ao passar o mouse */
 }
+/* --- RESPONSIVIDADE (MOBILE) --- */
+@media (max-width: 768px) {
+    
+    /* 1. Ajustar o Cabeçalho para empilhar */
+    .dashboard-header {
+        flex-direction: column;
+        height: auto; /* Altura automática para caber tudo */
+        padding: 15px;
+        gap: 15px;
+    }
+
+    .logo-area, .user-area {
+        width: 100%;
+        justify-content: center; /* Centraliza logo e usuário */
+    }
+
+    .search-area {
+        width: 100%; /* Barra de pesquisa ocupa toda a largura */
+        max-width: 100%;
+    }
+
+    /* 2. Transformar o Grid de 3 colunas em 1 coluna única */
+    .dashboard-main {
+        grid-template-columns: 1fr; /* Uma coluna só */
+        padding: 15px; /* Menos espaçamento nas bordas */
+        gap: 20px;
+    }
+
+    /* 3. Ajustes nos Cards */
+    .card {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .stat-box strong {
+        font-size: 1.5rem; /* Diminui um pouco a fonte dos números */
+    }
+    
+    .room-item {
+        font-size: 0.9rem;
+    }
+}
