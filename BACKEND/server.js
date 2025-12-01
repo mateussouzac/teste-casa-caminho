@@ -377,23 +377,27 @@ app.post('/api/auth/login', async (req, res) => {
 // --- MÓDULO DE QUARTOS ---
 
 // 1. Listar todos os quartos
+// 1. LISTAR TODOS OS QUARTOS (GET) - CORRIGIDO
 app.get('/api/rooms', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
-        // Ordena por numero para ficar A1, A2, B1...
+        
+        // Busca do banco
         const [rows] = await connection.execute("SELECT * FROM quarto ORDER BY numero");
         await connection.end();
-        
-        // Formata para o front-end
+
         const quartosFormatados = rows.map(row => ({
             id: row.id_quarto,
-            number: row.numero, // Usando coluna 'numero'
-            type: row.tipo || row.tipo_quarto, // Usando coluna 'tipo' (com fallback)
-            status: row.status_ocupacao
+            number: row.numero, 
+            type: row.tipo,    
+            status: row.status_ocupacao 
         }));
         
         res.json(quartosFormatados);
-    } catch (err) { res.status(500).json({ error: "Erro ao listar quartos" }); }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao listar quartos" });
+    }
 });
 
 // 2. Criar Quarto (POST)
