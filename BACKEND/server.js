@@ -47,7 +47,7 @@ app.get('/api/lista-espera', async (req, res) => {
         const connection = await mysql.createConnection(dbConfig);
         const [rows] = await connection.execute(`
             SELECT 
-                l.id_lista as id, p.nome, s.data_solicitacao, 'Único' as tipo_quarto, p.telefone, l.status_espera as status
+                l.id_lista as id, p.nome, s.data_solicitacao, 'Único' as tipo, p.telefone, l.status_espera as status
             FROM lista_espera l
             JOIN solicitacao s ON l.id_solicitacao = s.id_solicitacao
             JOIN paciente p ON s.id_paciente = p.id_paciente
@@ -370,7 +370,7 @@ app.get('/api/rooms', async (req, res) => {
         const quartosFormatados = rows.map(row => ({
             id: row.id_quarto,
             number: row.numero, // Usa a coluna 'numero' real do banco
-            type: row.tipo_quarto || row.tipo, // Tenta os dois nomes por garantia
+            type: row.tipo || row.tipo, // Tenta os dois nomes por garantia
             status: row.status_ocupacao
         }));
         
@@ -396,7 +396,7 @@ app.post('/api/rooms', async (req, res) => {
         // Insere na tabela 'quarto' usando as colunas corretas
         // status padrão = 'Livre' se não vier nada
         const [result] = await connection.execute(
-            "INSERT INTO quarto (numero, tipo_quarto, status_ocupacao) VALUES (?, ?, ?)",
+            "INSERT INTO quarto (numero, tipo, status_ocupacao) VALUES (?, ?, ?)",
             [number, type, status || 'Livre']
         );
         
