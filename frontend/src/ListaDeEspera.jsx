@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import './ListaDeEspera.css';
 import logoImg from './assets/logo.png'; // Reutilizando a logo que você já tem
 
