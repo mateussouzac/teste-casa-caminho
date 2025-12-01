@@ -129,3 +129,16 @@
 .status-tag.em-espera { background: #fff3cd; color: #856404; }
 .status-tag.aprovado { background: #d4edda; color: #155724; }
 .status-tag.concluido { background: #d1ecf1; color: #0c5460; }
+/* Adicione no final de src/AnaliseDados.css */
+
+/* Força a cor do texto da tabela para PRETO */
+.tabela-analise th, 
+.tabela-analise td {
+    color: #333 !important; /* Cinza escuro */
+    border-bottom: 1px solid #ddd; /* Linhas divisórias cinzas */
+}
+
+/* Destaca o cabeçalho da tabela */
+.tabela-analise th {
+    background-color: #f0f0f0; /* Fundo cinza claro no cabeçalho */
+}
