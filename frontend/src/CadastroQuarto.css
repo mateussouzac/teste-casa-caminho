@@ -452,3 +452,32 @@ td {
 .px-3\.py-2 {
   padding: 0.5rem 0.75rem;
 }
+/* src/CadastroQuarto.css */
+
+/* Força a cor do texto da tabela para ESCURO */
+.overflow-x-auto table th, 
+.overflow-x-auto table td {
+    color: #333 !important; /* Cinza escuro */
+}
+
+/* Garante que o cabeçalho da tabela tenha fundo cinza claro */
+.overflow-x-auto table thead th {
+    background-color: #f1f3f5;
+    border-bottom: 2px solid #ddd;
+}
+
+/* Garante que as linhas tenham bordas visíveis */
+.overflow-x-auto table td {
+    border-bottom: 1px solid #eee;
+}
+
+/* Corrige cor dos Labels do formulário */
+.group label {
+    color: #444 !important;
+}
+
+/* Corrige cor do texto dentro dos Inputs */
+.group input, .group select {
+    color: #333 !important;
+    background-color: white !important;
+}
