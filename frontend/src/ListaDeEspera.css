@@ -132,3 +132,20 @@ td {
     .cards-row { flex-direction: column; gap: 10px; margin-bottom: 20px; }
     .tabela-wrapper { overflow-x: auto; display: block; white-space: nowrap; }
 }
+/* --- BOTÃO ALOCAR --- */
+.btn-alocar {
+    background-color: #0066ff;
+    color: white !important;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-right: 8px;
+    display: inline-block;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-alocar:hover {
+    transform: scale(1.05);
+    background-color: #004fcc;
+}

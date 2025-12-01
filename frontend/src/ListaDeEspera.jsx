@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Importante para o link da logo
+import { Link, useParams } from 'react-router-dom';
 import './ListaDeEspera.css';
 import logoImg from './assets/logo.png'; // Reutilizando a logo que você já tem
 
+
 // URL da API (Render)
-const API_URL = 'https://teste-casa-caminho.onrender.com/api/lista-espera';
+const API_URL = "https://teste-casa-caminho.onrender.com/api/lista-espera";
 
 function ListaDeEspera() {
     const [lista, setLista] = useState([]);
@@ -95,8 +96,31 @@ function ListaDeEspera() {
                                         </span>
                                     </td>
                                     <td>
-                                        <button className="btn-action btn-aprovar" onClick={() => handleAprovar(item.id)}>Aprovar</button>
-                                        <button className="btn-action btn-remover" onClick={() => handleRemover(item.id)}>Remover</button>
+                                        <td>
+                                            <button
+                                                className="btn-action btn-aprovar"
+                                                onClick={() => handleAprovar(item.id)}
+                                            >
+                                                Aprovar
+                                            </button>
+
+                                            {item.status === "Aguardando Confirmação" && (
+                                                <Link
+                                                    to={`/gestao-permanencia/${item.id_paciente}`}
+                                                    className="btn-action btn-alocar"
+                                                >
+                                                    Alocar
+                                                </Link>
+                                            )}
+
+                                            <button
+                                                className="btn-action btn-remover"
+                                                onClick={() => handleRemover(item.id)}
+                                            >
+                                                Remover
+                                            </button>
+                                        </td>
+
                                     </td>
                                 </tr>
                             ))}
