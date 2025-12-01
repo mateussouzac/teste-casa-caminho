@@ -175,7 +175,7 @@ const GestaoPermanencia = () => {
 
       <div className="permanencia-container">
         <div className="page-intro">
-            <p>Fazer nova Solicitação — selecione um paciente existente para não digitar novamente</p>
+            <p>Fazer nova Solicitação </p>
             {msg && <p style={{color:'red'}}>{msg}</p>}
         </div>
 
