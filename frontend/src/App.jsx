@@ -8,6 +8,7 @@ import CadastroPaciente from './CadastroPaciente';
 import GestaoPermanencia from './GestaoPermanencia';
 import AnaliseDados from './AnaliseDados';
 import Login from './Login';
+import CadastroQuarto from './CadastroQuarto';
 
 // --- COMPONENTE DE PROTEÇÃO (O SEGURANÇA) ---
 const RotaProtegida = ({ children }) => {
@@ -60,7 +61,11 @@ function App() {
             <AnaliseDados />
           </RotaProtegida>
         } />
-
+        <Route path="/cadastro-quarto" element={
+          <RotaProtegida>
+            <CadastroQuarto />
+          </RotaProtegida>
+        } />
       </Routes>
     </BrowserRouter>
   );
