@@ -2,54 +2,31 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
-const bcrypt = require('bcrypt'); 
-const jwt = require('jsonwebtoken'); 
-const axios = require("axios"); // Importação movida para o topo
+// Bibliotecas de segurança (Login)
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- DATABASE CONFIGURATION (Hybrid: Local vs Cloud) ---
+// --- CONFIGURAÇÃO DO BANCO DE DADOS (HÍBRIDA) ---
+// Se estiver no Render, usa as variáveis de ambiente.
+// Se estiver no PC, usa o localhost.
 const dbConfig = {
     host: process.env.MYSQLHOST || 'localhost',
     user: process.env.MYSQLUSER || 'root',
-    password: process.env.MYSQLPASSWORD || '', 
+    password: process.env.MYSQLPASSWORD || '', // Coloque sua senha local aqui se tiver
     database: process.env.MYSQLDATABASE || 'sql-casacaminho',
     port: process.env.MYSQLPORT || 3306,
     ssl: process.env.MYSQLHOST ? { rejectUnauthorized: false } : undefined
 };
 
-// --- JWT CONFIGURATION ---
+// --- CONFIGURAÇÃO JWT ---
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo_super_secreto_casa_caminho';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
-// ----- FUNÇÃO PARA ENVIAR WHATSAPP -----
-async function enviarWhatsApp(telefone, mensagem) {
-    try {
-        // Verifica se as variáveis do Z-API existem antes de tentar enviar
-        if (!process.env.ZAPI_INSTANCE || !process.env.ZAPI_TOKEN) {
-            console.log("Z-API não configurada. Mensagem seria:", mensagem);
-            return false;
-        }
-
-        await axios.post(
-            `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE}/token/${process.env.ZAPI_TOKEN}/send-text`,
-            {
-                phone: telefone,
-                message: mensagem
-            }
-        );
-        console.log("WhatsApp enviado!");
-        return true;
-
-    } catch (err) {
-        console.error("Erro ao enviar Whats:", err.response?.data || err.message);
-        return false;
-    }
-}
-
-// --- AUTH MIDDLEWARE ---
+// --- MIDDLEWARE DE AUTENTICAÇÃO (Opcional para proteger rotas) ---
 function requireAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -63,11 +40,12 @@ function requireAuth(req, res, next) {
     }
 }
 
+
 // ==================================================================
 // INICIO MATEUS (Lista de Espera, Dashboard, Quartos Livres)
 // ==================================================================
 
-// (READ) Lista de Espera
+// (READ) Lista de Espera - Com JOINs para trazer nomes
 app.get('/api/lista-espera', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
@@ -118,41 +96,46 @@ app.delete('/api/lista-espera/:id', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Rota da Dashboard (Dados Gerais)
+// Rota da Dashboard (Dados Gerais e Estatísticas)
 app.get('/api/dashboard', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
+        
+        // 1. Quartos
         const [quartos] = await connection.execute('SELECT * FROM quarto');
+        
+        // 2. Próximas Chegadas
         const [chegadas] = await connection.execute(`
             SELECT p.nome, l.data_entrada FROM lista_espera l
             JOIN solicitacao s ON l.id_solicitacao = s.id_solicitacao
             JOIN paciente p ON s.id_paciente = p.id_paciente
             WHERE l.status_espera = 'Aguardando Confirmação' LIMIT 4
         `);
+        
+        // 3. Estatísticas
         const [pendentes] = await connection.execute("SELECT COUNT(*) as total FROM lista_espera WHERE status_espera = 'Em espera'");
         const totalQuartos = quartos.length;
         const ocupados = quartos.filter(q => q.status_ocupacao === 'Ocupado').length;
         const taxaOcupacao = totalQuartos > 0 ? Math.round((ocupados / totalQuartos) * 100) : 0;
+        
         await connection.end();
+        
         res.json({
-            quartos, proximasChegadas: chegadas,
+            quartos, 
+            proximasChegadas: chegadas,
             stats: { ocupacao: taxaOcupacao, leitosLivres: totalQuartos - ocupados, pendentes: pendentes[0].total, hospedes: ocupados }
         });
     } catch (error) { res.status(500).json({ error: "Erro ao carregar dashboard" }); }
 });
 
-// Rota para buscar quartos livres (CORRIGIDA: Adicionada conexão)
-app.get("/api/quartos/disponiveis", async (req, res) => {
+// Rota auxiliar: Buscar quartos livres
+app.get('/api/quartos-livres', async (req, res) => {
     try {
-        const connection = await mysql.createConnection(dbConfig); // <--- FALTAVA ISSO
-        const [rows] = await connection.execute(
-            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre'"
-        );
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute("SELECT * FROM quarto WHERE status_ocupacao = 'Livre' ORDER BY numero");
         await connection.end();
         res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: "Erro ao buscar quartos disponíveis" });
-    }
+    } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 // ==================================================================
@@ -174,7 +157,7 @@ app.get('/api/pacientes', async (req, res) => {
     } catch (err) { res.status(500).json({ erro: "Erro ao listar pacientes" }); }
 });
 
-// Buscar um paciente
+// Buscar um paciente por ID
 app.get('/api/pacientes/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -186,11 +169,13 @@ app.get('/api/pacientes/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ erro: "Erro ao buscar paciente" }); }
 });
 
-// Cadastrar Paciente (Completo: Paciente + Solicitação + Lista)
+// Cadastrar Paciente (Lógica Completa: Paciente -> Solicitação -> Lista ou Quarto)
 app.post('/api/pacientes', async (req, res) => {
     const { nome, telefone, data_nascimento, cidade, condicao, diagnostico, observacoes, id_quarto } = req.body;
     const obsFinal = condicao ? `${observacoes || ''} | Condição: ${condicao}` : observacoes;
+    
     const connection = await mysql.createConnection(dbConfig);
+    
     try {
         await connection.beginTransaction();
         
@@ -201,14 +186,15 @@ app.post('/api/pacientes', async (req, res) => {
         );
         const idPaciente = pacienteResult.insertId;
 
-        // 2. Se escolheu quarto, ocupa ele
+        // 2. Lógica do Quarto (Se escolheu quarto, já ocupa)
         let statusInicial = 'Em espera';
         if (id_quarto) {
             statusInicial = 'Aguardando Confirmação';
+            // Atualiza o status do quarto
             await connection.execute(`UPDATE quarto SET id_paciente = ?, status_ocupacao = 'Ocupado' WHERE id_quarto = ?`, [idPaciente, id_quarto]);
         }
 
-        // 3. Cria Solicitação e Lista
+        // 3. Cria Solicitação e entrada na Lista
         const dataHoje = new Date().toISOString().split('T')[0];
         const [solicResult] = await connection.execute(
             `INSERT INTO solicitacao (id_paciente, id_usuario, data_solicitacao, status) VALUES (?, 1, ?, ?)`,
@@ -220,7 +206,7 @@ app.post('/api/pacientes', async (req, res) => {
         );
 
         await connection.commit();
-        res.status(201).json({ message: 'Salvo com sucesso!' });
+        res.status(201).json({ message: 'Salvo com sucesso!', id: idPaciente });
     } catch (err) {
         await connection.rollback();
         console.error("Erro no cadastro:", err);
@@ -251,7 +237,7 @@ app.delete('/api/pacientes/:id', async (req, res) => {
         const connection = await mysql.createConnection(dbConfig);
         await connection.execute("DELETE FROM paciente WHERE id_paciente = ?", [id]);
         await connection.end();
-        res.json({ mensagem: "Paciente excluído com sucesso" });
+        res.json({ message: "Paciente excluído com sucesso" });
     } catch (err) { res.status(500).json({ erro: "Erro ao excluir paciente" }); }
 });
 
@@ -270,6 +256,7 @@ app.delete('/api/pacientes/:id', async (req, res) => {
 app.get('/api/permanencias', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
+        // Busca na tabela 'permanencia' (Singular)
         const [rows] = await connection.execute("SELECT * FROM permanencia ORDER BY id DESC");
         await connection.end();
         res.json(rows);
@@ -339,7 +326,7 @@ app.get('/api/analise', async (req, res) => {
 
 
 // ==================================================================
-// INICIO GABRIEL (Autenticação / Login)
+// INICIO GABRIEL (Autenticação / Login / Quartos)
 // ==================================================================
 
 // Registrar Usuário
@@ -374,10 +361,10 @@ app.post('/api/auth/login', async (req, res) => {
         if (rows.length === 0) return res.status(401).json({ error: "Credenciais inválidas." });
         const user = rows[0];
 
-        // Verifica senha (compara hash OU texto puro para usuários antigos)
+        // Verifica senha (Hash ou texto puro para admin legado)
         const senhaOk = await bcrypt.compare(senha, user.senha);
         let acessoPermitido = senhaOk;
-        if (!senhaOk && user.senha === senha) acessoPermitido = true; // Fallback para senha '123'
+        if (!senhaOk && user.senha === senha) acessoPermitido = true; 
 
         if (!acessoPermitido) return res.status(401).json({ error: "Credenciais inválidas." });
 
@@ -386,22 +373,25 @@ app.post('/api/auth/login', async (req, res) => {
         res.json({ token, user: { id: user.id_usuario, nome: user.nome, email: user.email, papel: user.papel } });
     } catch (error) { res.status(500).json({ error: "Erro no servidor." }); }
 });
-//MODULO DE QUARTOS - GABRIEL
 
-// 1. LISTAR TODOS OS QUARTOS (GET)
+// --- MÓDULO DE QUARTOS ---
+
+// 1. Listar todos os quartos
+// 1. LISTAR TODOS OS QUARTOS (GET) - CORRIGIDO
 app.get('/api/rooms', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
-        // Busca todos os quartos ordenados pelo número (A1, A2, B1...)
+        
+        // Busca do banco
         const [rows] = await connection.execute("SELECT * FROM quarto ORDER BY numero");
         await connection.end();
         
-        // Mapeia para o formato que o front dele espera (id, number, type, status)
+
         const quartosFormatados = rows.map(row => ({
             id: row.id_quarto,
             number: row.numero, 
             type: row.tipo,    
-            status: row.status_ocupacao
+            status: row.status_ocupacao 
         }));
         
         res.json(quartosFormatados);
@@ -411,7 +401,7 @@ app.get('/api/rooms', async (req, res) => {
     }
 });
 
-// 2. CRIAR QUARTO (POST)
+// 2. Criar Quarto (POST)
 app.post('/api/rooms', async (req, res) => {
     const { number, type, status } = req.body;
 
@@ -421,25 +411,35 @@ app.post('/api/rooms', async (req, res) => {
 
     try {
         const connection = await mysql.createConnection(dbConfig);
+        
+        // Insere usando os nomes de colunas corretos do nosso banco
         const [result] = await connection.execute(
             "INSERT INTO quarto (numero, tipo, status_ocupacao) VALUES (?, ?, ?)",
             [number, type, status || 'Livre']
         );
+        
         await connection.end();
-        res.status(201).json({ id: result.insertId, number, type, status: status || 'Livre' });
+        
+        res.status(201).json({ 
+            id: result.insertId,
+            number, 
+            type, 
+            status: status || 'Livre'
+        });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Erro ao criar quarto." });
+        res.status(500).json({ error: "Erro ao criar quarto: " + err.message });
     }
 });
 
-// 3. ATUALIZAR QUARTO (PUT) - CORRIGIDO
+// 3. Atualizar Quarto (PUT)
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params;
     const { number, type, status } = req.body; 
 
     try {
         const connection = await mysql.createConnection(dbConfig);
+        
         let campos = [];
         let valores = [];
 
@@ -455,6 +455,7 @@ app.put('/api/rooms/:id', async (req, res) => {
             `UPDATE quarto SET ${campos.join(", ")} WHERE id_quarto = ?`,
             valores
         );
+        
         await connection.end();
         res.json({ message: "Quarto atualizado com sucesso" });
 
@@ -464,148 +465,43 @@ app.put('/api/rooms/:id', async (req, res) => {
     }
 });
 
-// 4. REMOVER QUARTO (DELETE)
+// 4. Remover Quarto (DELETE)
 app.delete('/api/rooms/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const connection = await mysql.createConnection(dbConfig);
-        const [result] = await connection.execute("DELETE FROM quarto WHERE id_quarto = ?", [id]);
+        await connection.execute("DELETE FROM quarto WHERE id_quarto = ?", [id]);
         await connection.end();
-
-        if (result.affectedRows === 0) return res.status(404).json({ error: "Quarto não encontrado" });
-        
         res.json({ ok: true });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Erro ao remover quarto" });
-    }
+    } catch (err) { res.status(500).json({ error: "Erro ao remover quarto" }); }
+});
+
+// Rotas extras de Ocupar/Liberar Quarto (para integração)
+app.put('/api/quartos/:id/ocupar', async (req, res) => {
+    const { id } = req.params;
+    const { id_paciente } = req.body;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = ? WHERE id_quarto = ?', ['Ocupado', id_paciente || null, id]);
+        await connection.end();
+        res.json({ message: 'Quarto atualizado para Ocupado' });
+    } catch (err) { res.status(500).json({ error: 'Erro ao ocupar quarto' }); }
+});
+
+app.put('/api/quartos/:id/liberar', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = NULL WHERE id_quarto = ?', ['Livre', id]);
+        await connection.end();
+        res.json({ message: 'Quarto liberado' });
+    } catch (err) { res.status(500).json({ error: 'Erro ao liberar quarto' }); }
 });
 
 // ==================================================================
 // FIM GABRIEL
 // ==================================================================
 
-// Criar solicitacao + inserir na lista_espera para paciente existente
-app.post('/api/lista-espera', async (req, res) => {
-  const { id_paciente, data_entrada, status_espera = 'Em espera' } = req.body;
-  if (!id_paciente || !data_entrada) return res.status(400).json({ error: 'id_paciente e data_entrada são obrigatórios' });
-
-  try {
-    const connection = await mysql.createConnection(dbConfig);
-
-    // 1) criar solicitacao (id_usuario fixo 1 como nos outros pontos)
-    const [sol] = await connection.execute(
-      `INSERT INTO solicitacao (id_paciente, id_usuario, data_solicitacao, status) VALUES (?, 1, ?, ?)`,
-      [id_paciente, data_entrada, status_espera]
-    );
-
-    // 2) inserir na lista_espera
-    await connection.execute(
-      `INSERT INTO lista_espera (id_solicitacao, data_entrada, status_espera) VALUES (?, ?, ?)`,
-      [sol.insertId, data_entrada, status_espera]
-    );
-
-    await connection.end();
-    res.status(201).json({ message: 'Inserido na lista de espera' });
-  } catch (err) {
-    console.error('Erro criar lista de espera:', err.message);
-    res.status(500).json({ error: 'Erro ao inserir na lista de espera' });
-  }
-});
-
-// Ocupar quarto (seta status_ocupacao = 'Ocupado' e id_paciente para referência)
-app.put('/api/quartos/:id/ocupar', async (req, res) => {
-  const { id } = req.params;
-  const { id_paciente } = req.body;
-  try {
-    const connection = await mysql.createConnection(dbConfig);
-    await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = ? WHERE id_quarto = ?', ['Ocupado', id_paciente || null, id]);
-    await connection.end();
-    res.json({ message: 'Quarto atualizado para Ocupado' });
-  } catch (err) {
-    console.error('Erro ocupar quarto:', err);
-    res.status(500).json({ error: 'Erro ao ocupar quarto' });
-  }
-});
-
-// Liberar quarto (dar alta) - seta status_ocupacao = 'Livre' e id_paciente = NULL
-app.put('/api/quartos/:id/liberar', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const connection = await mysql.createConnection(dbConfig);
-    await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = NULL WHERE id_quarto = ?', ['Livre', id]);
-    await connection.end();
-    res.json({ message: 'Quarto liberado' });
-  } catch (err) {
-    console.error('Erro liberar quarto:', err);
-    res.status(500).json({ error: 'Erro ao liberar quarto' });
-  }
-});
-
-// Rota EXTRA: Alocar paciente da lista de espera para um quarto (COM WHATSAPP)
-app.post("/api/lista-espera/:id/alocar", async (req, res) => {
-    const { id } = req.params;
-    const connection = await mysql.createConnection(dbConfig); // CORRIGIDO: Criar conexão aqui
-
-    try {
-        // Buscar paciente da lista
-        const [lista] = await connection.execute(
-            "SELECT * FROM lista_espera WHERE id_lista = ?",
-            [id]
-        );
-
-        const id_paciente = lista[0].id_paciente;
-
-        // Buscar quarto disponível
-        const [quartos] = await connection.execute(
-            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre' LIMIT 1"
-        );
-
-        if (quartos.length === 0) {
-            return res.json({ message: "Ainda não há quartos livres." });
-        }
-
-        const quarto = quartos[0];
-
-        // Criar permanência
-        await connection.execute(
-            "INSERT INTO permanencia (id_paciente, data_entrada, duracao_dias, motivo, status) VALUES (?, CURDATE(), 0, 'Entrada da lista de espera', 'Ativo')",
-            [id_paciente]
-        );
-
-        // Atualizar quarto
-        await connection.execute(
-            "UPDATE quarto SET status_ocupacao='Ocupado', id_paciente=?, data_entrada=CURDATE() WHERE id_quarto=?",
-            [id_paciente, quarto.id_quarto]
-        );
-
-        // Remover da fila
-        await connection.execute(
-            "DELETE FROM lista_espera WHERE id_lista=?",
-            [id]
-        );
-
-        // Buscar telefone
-        const [dados] = await connection.execute(
-            "SELECT nome, telefone FROM paciente WHERE id_paciente=?",
-            [id_paciente]
-        );
-
-        // Enviar WhatsApp
-        await enviarWhatsApp(
-            dados[0].telefone,
-            `Olá ${dados[0].nome}! 💙\nUm quarto foi liberado e você foi alocado!\n🛏️ Quarto: ${quarto.numero}\n📅 Entrada: HOJE`
-        );
-
-        res.json({ message: "Paciente alocado com sucesso!" });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Erro ao alocar paciente" });
-    } finally {
-        await connection.end(); // IMPORTANTE: Fechar conexão
-    }
-});
 
 // INICIAR SERVIDOR
 const PORT = process.env.PORT || 3001;
