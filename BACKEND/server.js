@@ -470,6 +470,62 @@ app.delete('/api/rooms/:id', async (req, res) => {
 // FIM GABRIEL
 // ==================================================================
 
+// Criar solicitacao + inserir na lista_espera para paciente existente
+app.post('/api/lista-espera', async (req, res) => {
+  const { id_paciente, data_entrada, status_espera = 'Em espera' } = req.body;
+  if (!id_paciente || !data_entrada) return res.status(400).json({ error: 'id_paciente e data_entrada são obrigatórios' });
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+
+    // 1) criar solicitacao (id_usuario fixo 1 como nos outros pontos)
+    const [sol] = await connection.execute(
+      `INSERT INTO solicitacao (id_paciente, id_usuario, data_solicitacao, status) VALUES (?, 1, ?, ?)`,
+      [id_paciente, data_entrada, status_espera]
+    );
+
+    // 2) inserir na lista_espera
+    await connection.execute(
+      `INSERT INTO lista_espera (id_solicitacao, data_entrada, status_espera) VALUES (?, ?, ?)`,
+      [sol.insertId, data_entrada, status_espera]
+    );
+
+    await connection.end();
+    res.status(201).json({ message: 'Inserido na lista de espera' });
+  } catch (err) {
+    console.error('Erro criar lista de espera:', err.message);
+    res.status(500).json({ error: 'Erro ao inserir na lista de espera' });
+  }
+});
+
+// Ocupar quarto (seta status_ocupacao = 'Ocupado' e id_paciente para referência)
+app.put('/api/quartos/:id/ocupar', async (req, res) => {
+  const { id } = req.params;
+  const { id_paciente } = req.body;
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = ? WHERE id_quarto = ?', ['Ocupado', id_paciente || null, id]);
+    await connection.end();
+    res.json({ message: 'Quarto atualizado para Ocupado' });
+  } catch (err) {
+    console.error('Erro ocupar quarto:', err);
+    res.status(500).json({ error: 'Erro ao ocupar quarto' });
+  }
+});
+
+// Liberar quarto (dar alta) - seta status_ocupacao = 'Livre' e id_paciente = NULL
+app.put('/api/quartos/:id/liberar', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.execute('UPDATE quarto SET status_ocupacao = ?, id_paciente = NULL WHERE id_quarto = ?', ['Livre', id]);
+    await connection.end();
+    res.json({ message: 'Quarto liberado' });
+  } catch (err) {
+    console.error('Erro liberar quarto:', err);
+    res.status(500).json({ error: 'Erro ao liberar quarto' });
+  }
+});
 
 // INICIAR SERVIDOR
 const PORT = process.env.PORT || 3001;
