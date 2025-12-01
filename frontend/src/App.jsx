@@ -10,6 +10,7 @@ import AnaliseDados from './AnaliseDados';
 import Login from './Login';
 import CadastroQuarto from './CadastroQuarto';
 
+
 // --- COMPONENTE DE PROTEÇÃO (O SEGURANÇA) ---
 const RotaProtegida = ({ children }) => {
   // Verifica se tem um usuário salvo no navegador
@@ -56,6 +57,12 @@ function App() {
           </RotaProtegida>
         } />
 
+          <Route path="/gestao-permanencia/:id_paciente_url" element={
+          <RotaProtegida>
+            <GestaoPermanencia />
+          </RotaProtegida>
+        } />
+
         <Route path="/analise" element={
           <RotaProtegida>
             <AnaliseDados />
@@ -70,5 +77,8 @@ function App() {
     </BrowserRouter>
   );
 }
+
+
+
 
 export default App;

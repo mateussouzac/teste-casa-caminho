@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import './GestaoPermanencia.css';
 import logoImg from './assets/logo.png';
 
+
 // URL Base da API (Render)
 const BASE = 'https://teste-casa-caminho.onrender.com';
 
 const GestaoPermanencia = () => {
   // Estados para armazenar dados do banco
+  const { id_paciente_url } = useParams();
   const [lista, setLista] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [quartosLivres, setQuartosLivres] = useState([]);
@@ -29,6 +31,23 @@ const GestaoPermanencia = () => {
   useEffect(() => {
     carregarDadosIniciais();
   }, []);
+
+  useEffect(() => {
+  if (id_paciente_url && pacientes.length > 0) {
+    const paciente = pacientes.find(
+      p => String(p.id_paciente) === String(id_paciente_url)
+    );
+
+    if (paciente) {
+      setFormData(prev => ({
+        ...prev,
+        id_paciente: paciente.id_paciente,
+        telefone_contato: paciente.telefone || ''
+      }));
+    }
+  }
+}, [id_paciente_url, pacientes]);
+
 
   async function carregarDadosIniciais() {
     try {
