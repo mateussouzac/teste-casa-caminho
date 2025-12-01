@@ -136,14 +136,15 @@ app.get('/api/dashboard', async (req, res) => {
     } catch (error) { res.status(500).json({ error: "Erro ao carregar dashboard" }); }
 });
 
-// Rota para buscar apenas quartos livres (Usada no Cadastro)
-app.get('/api/quartos-livres', async (req, res) => {
+app.get("/api/quartos/disponiveis", async (req, res) => {
     try {
-        const connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute("SELECT * FROM quarto WHERE status_ocupacao = 'Livre' ORDER BY numero");
-        await connection.end();
+        const [rows] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre'"
+        );
         res.json(rows);
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao buscar quartos disponíveis" });
+    }
 });
 
 // ==================================================================
@@ -267,19 +268,65 @@ app.get('/api/permanencias', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Cadastrar permanência
-app.post('/api/permanencias', async (req, res) => {
-    const { nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo } = req.body;
+app.post("/api/permanencias", async (req, res) => {
+    const { id_paciente, data_entrada, duracao_dias, motivo } = req.body;
+
     try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.execute(
-            `INSERT INTO permanencia (nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo) VALUES (?, ?, ?, ?, ?, ?)`,
-            [nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo]
+        // 1 - Procurar quarto livre
+        const [quartos] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre' LIMIT 1"
         );
-        await connection.end();
-        res.status(201).json({ message: 'Permanência registrada com sucesso!' });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+
+        if (quartos.length === 0) {
+            // Não tem quarto → manda para lista de espera
+            await connection.execute(
+                "INSERT INTO lista_espera (id_paciente, data_entrada, status_espera) VALUES (?, CURDATE(), 'Aguardando')",
+                [id_paciente]
+            );
+
+            return res.json({
+                message: "Sem quartos disponíveis. Paciente enviado para lista de espera.",
+                lista_espera: true
+            });
+        }
+
+        const quarto = quartos[0];
+
+        // 2 - Criar registro de permanência
+        const [result] = await connection.execute(
+            "INSERT INTO permanencia (id_paciente, data_entrada, duracao_dias, motivo, status) VALUES (?, ?, ?, ?, 'Ativo')",
+            [id_paciente, data_entrada, duracao_dias, motivo]
+        );
+
+        // 3 - Atualizar quarto
+        await connection.execute(
+            "UPDATE quarto SET status_ocupacao='Ocupado', id_paciente=?, data_entrada=? WHERE id_quarto=?",
+            [id_paciente, data_entrada, quarto.id_quarto]
+        );
+
+        // 4 - Buscar telefone do paciente
+        const [pDados] = await connection.execute(
+            "SELECT nome, telefone FROM paciente WHERE id_paciente = ?",
+            [id_paciente]
+        );
+
+        // 5 - Enviar WhatsApp
+        await enviarWhatsApp(
+            pDados[0].telefone,
+            `Olá ${pDados[0].nome}! 😊\nSua entrada foi confirmada!\n📅 Data: ${data_entrada}\n🛏️ Quarto: ${quarto.numero}\n\nSeja bem-vindo(a)! 💙`
+        );
+
+        res.json({
+            message: "Paciente alocado com sucesso!",
+            quarto: quarto.numero
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao registrar permanência" });
+    }
 });
+
 
 // Excluir permanência
 app.delete('/api/permanencias/:id', async (req, res) => {
@@ -586,6 +633,67 @@ app.get("/api/quartos/disponiveis", async (req, res) => {
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: "Erro ao buscar quartos disponíveis" });
+    }
+});
+
+app.post("/api/lista-espera/:id/alocar", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Buscar paciente da lista
+        const [lista] = await connection.execute(
+            "SELECT * FROM lista_espera WHERE id_lista = ?",
+            [id]
+        );
+
+        const id_paciente = lista[0].id_paciente;
+
+        // Buscar quarto disponível
+        const [quartos] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre' LIMIT 1"
+        );
+
+        if (quartos.length === 0) {
+            return res.json({ message: "Ainda não há quartos livres." });
+        }
+
+        const quarto = quartos[0];
+
+        // Criar permanência
+        await connection.execute(
+            "INSERT INTO permanencia (id_paciente, data_entrada, duracao_dias, motivo, status) VALUES (?, CURDATE(), 0, 'Entrada da lista de espera', 'Ativo')",
+            [id_paciente]
+        );
+
+        // Atualizar quarto
+        await connection.execute(
+            "UPDATE quarto SET status_ocupacao='Ocupado', id_paciente=?, data_entrada=CURDATE() WHERE id_quarto=?",
+            [id_paciente, quarto.id_quarto]
+        );
+
+        // Remover da fila
+        await connection.execute(
+            "DELETE FROM lista_espera WHERE id_lista=?",
+            [id]
+        );
+
+        // Buscar telefone
+        const [dados] = await connection.execute(
+            "SELECT nome, telefone FROM paciente WHERE id_paciente=?",
+            [id_paciente]
+        );
+
+        // Enviar WhatsApp
+        await enviarWhatsApp(
+            dados[0].telefone,
+            `Olá ${dados[0].nome}! 💙\nUm quarto foi liberado e você foi alocado!\n🛏️ Quarto: ${quarto.numero}\n📅 Entrada: HOJE`
+        );
+
+        res.json({ message: "Paciente alocado com sucesso!" });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao alocar paciente" });
     }
 });
 
