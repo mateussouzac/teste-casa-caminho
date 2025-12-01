@@ -9,6 +9,27 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+const axios = require("axios");
+
+// ----- FUNÇÃO PARA ENVIAR WHATSAPP -----
+async function enviarWhatsApp(telefone, mensagem) {
+    try {
+        await axios.post(
+            `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE}/token/${process.env.ZAPI_TOKEN}/send-text`,
+            {
+                phone: telefone,
+                message: mensagem
+            }
+        );
+        console.log("WhatsApp enviado!");
+        return true;
+
+    } catch (err) {
+        console.error("Erro ao enviar Whats:", err.response?.data || err);
+        return false;
+    }
+}
+
 // --- DATABASE CONFIGURATION (Hybrid: Local vs Cloud) ---
 const dbConfig = {
     host: process.env.MYSQLHOST || 'localhost',
@@ -47,7 +68,7 @@ app.get('/api/lista-espera', async (req, res) => {
         const connection = await mysql.createConnection(dbConfig);
         const [rows] = await connection.execute(`
             SELECT 
-                l.id_lista as id, p.nome, s.data_solicitacao, 'Único' as tipo_quarto, p.telefone, l.status_espera as status
+                l.id_lista as id, p.nome, s.data_solicitacao, 'Único' as tipo, p.telefone, l.status_espera as status
             FROM lista_espera l
             JOIN solicitacao s ON l.id_solicitacao = s.id_solicitacao
             JOIN paciente p ON s.id_paciente = p.id_paciente
@@ -246,20 +267,6 @@ app.get('/api/permanencias', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Cadastrar permanência
-app.post('/api/permanencias', async (req, res) => {
-    const { nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo } = req.body;
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.execute(
-            `INSERT INTO permanencia (nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo) VALUES (?, ?, ?, ?, ?, ?)`,
-            [nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo]
-        );
-        await connection.end();
-        res.status(201).json({ message: 'Permanência registrada com sucesso!' });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // Excluir permanência
 app.delete('/api/permanencias/:id', async (req, res) => {
     const { id } = req.params;
@@ -370,7 +377,7 @@ app.get('/api/rooms', async (req, res) => {
         const quartosFormatados = rows.map(row => ({
             id: row.id_quarto,
             number: row.numero, // Usa a coluna 'numero' real do banco
-            type: row.tipo_quarto || row.tipo, // Tenta os dois nomes por garantia
+            type: row.tipo || row.tipo, // Tenta os dois nomes por garantia
             status: row.status_ocupacao
         }));
         
@@ -381,59 +388,25 @@ app.get('/api/rooms', async (req, res) => {
     }
 });
 
-// 2. CRIAR QUARTO (POST)
-// Espera receber: { number: "A1", type: "Único", status: "Livre" }
-app.post('/api/rooms', async (req, res) => {
-    const { number, type, status } = req.body;
-
-    if (!number || !type) {
-        return res.status(400).json({ error: "Número e Tipo são obrigatórios." });
-    }
-
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        
-        // Insere na tabela 'quarto' usando as colunas corretas
-        // status padrão = 'Livre' se não vier nada
-        const [result] = await connection.execute(
-            "INSERT INTO quarto (numero, tipo_quarto, status_ocupacao) VALUES (?, ?, ?)",
-            [number, type, status || 'Livre']
-        );
-        
-        await connection.end();
-        
-        res.status(201).json({ 
-            id: result.insertId,
-            number, 
-            type, 
-            status: status || 'Livre'
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Erro ao criar quarto." });
-    }
-});
-
-// 3. ATUALIZAR QUARTO (PUT)
+// 3. ATUALIZAR QUARTO (PUT) - CORRIGIDO
 app.put('/api/rooms/:id', async (req, res) => {
     const { id } = req.params;
-    const { number, type, status } = req.body; // Aceita atualizar número também
+    const { number, type, status } = req.body; 
 
     try {
         const connection = await mysql.createConnection(dbConfig);
         
-        // Constrói a query dinamicamente (só atualiza o que foi enviado)
-        // Isso é uma versão simplificada da lógica do seu colega, mas mais direta
         let campos = [];
         let valores = [];
 
         if (number) { campos.push("numero = ?"); valores.push(number); }
-        if (type) { campos.push("tipo_quarto = ?"); valores.push(type); }
+        // CORREÇÃO AQUI: Mudamos 'tipo_quarto' para 'tipo'
+        if (type) { campos.push("tipo = ?"); valores.push(type); } 
         if (status) { campos.push("status_ocupacao = ?"); valores.push(status); }
 
         if (campos.length === 0) return res.json({ message: "Nada a atualizar" });
 
-        valores.push(id); // Adiciona o ID no final para o WHERE
+        valores.push(id); 
 
         await connection.execute(
             `UPDATE quarto SET ${campos.join(", ")} WHERE id_quarto = ?`,
@@ -525,6 +498,168 @@ app.put('/api/quartos/:id/liberar', async (req, res) => {
     console.error('Erro liberar quarto:', err);
     res.status(500).json({ error: 'Erro ao liberar quarto' });
   }
+});
+
+
+
+// =============================================================
+//  NOVA ROTA — QUARTOS DISPONÍVEIS
+// =============================================================
+app.get("/api/quartos/disponiveis", async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre'"
+        );
+        await connection.end();
+        res.json(rows);
+    } catch (err) {
+        console.error("Erro:", err);
+        res.status(500).json({ error: "Erro ao buscar quartos disponíveis" });
+    }
+});
+
+
+// =============================================================
+//  SUBSTITUIR COMPLETAMENTE sua rota POST /api/permanencias
+// =============================================================
+app.post("/api/permanencias", async (req, res) => {
+    const { id_paciente, data_entrada, duracao_dias, motivo } = req.body;
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+
+        // 1 — procurar quarto livre
+        const [quartos] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao = 'Livre' LIMIT 1"
+        );
+
+        if (quartos.length === 0) {
+            // 2 — sem quarto → lista de espera
+            await connection.execute(
+                `INSERT INTO lista_espera (id_paciente, data_entrada, status_espera)
+                 VALUES (?, ?, 'Em espera')`,
+                [id_paciente, data_entrada]
+            );
+
+            await connection.end();
+            return res.json({
+                message: "Sem quartos disponíveis. Paciente enviado para lista de espera.",
+                espera: true
+            });
+        }
+
+        const quarto = quartos[0];
+
+        // 3 — criar permanência
+        const [perma] = await connection.execute(
+            `INSERT INTO permanencia (nome_paciente, telefone_contato, nome_acompanhante, data_entrada, duracao_dias, motivo, status)
+             SELECT nome, telefone, '', ?, ?, ?, 'Ativo'
+             FROM paciente WHERE id_paciente = ?`,
+            [data_entrada, duracao_dias, motivo, id_paciente]
+        );
+
+        // 4 — ocupar quarto
+        await connection.execute(
+            `UPDATE quarto SET status_ocupacao='Ocupado', id_paciente=?, data_entrada=? WHERE id_quarto=?`,
+            [id_paciente, data_entrada, quarto.id_quarto]
+        );
+
+        // 5 — buscar dados paciente
+        const [pac] = await connection.execute(
+            "SELECT nome, telefone FROM paciente WHERE id_paciente=?",
+            [id_paciente]
+        );
+
+        await enviarWhatsApp(
+            pac[0].telefone,
+            `Olá ${pac[0].nome}! 😊\nSua entrada foi confirmada!\n📅 Data: ${data_entrada}\n🛏️ Quarto: ${quarto.numero}\n\nSeja bem-vindo(a)! 💙`
+        );
+
+        await connection.end();
+        res.json({
+            message: "Paciente alocado e WhatsApp enviado!",
+            quarto: quarto.numero
+        });
+
+    } catch (err) {
+        console.error("Erro cadastrar permanência:", err);
+        res.status(500).json({ error: "Erro ao criar permanência" });
+    }
+});
+
+
+// =============================================================
+//  ALOCAR PACIENTE DA LISTA DE ESPERA
+// =============================================================
+app.post("/api/lista-espera/:id/alocar", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+
+        // 1 — buscar paciente da lista
+        const [linha] = await connection.execute(
+            `SELECT id_paciente FROM lista_espera WHERE id_lista=?`,
+            [id]
+        );
+
+        if (linha.length === 0) return res.status(404).json({ error: "Registro não encontrado" });
+
+        const id_paciente = linha[0].id_paciente;
+
+        // 2 — quarto livre?
+        const [quartos] = await connection.execute(
+            "SELECT * FROM quarto WHERE status_ocupacao='Livre' LIMIT 1"
+        );
+
+        if (quartos.length === 0) {
+            await connection.end();
+            return res.json({ message: "Ainda não há quartos livres." });
+        }
+
+        const quarto = quartos[0];
+
+        // 3 — criar permanência
+        await connection.execute(
+            `INSERT INTO permanencia (nome_paciente, telefone_contato, data_entrada, duracao_dias, motivo, status)
+             SELECT nome, telefone, CURDATE(), 0, 'Entrada da lista de espera', 'Ativo'
+             FROM paciente WHERE id_paciente=?`,
+            [id_paciente]
+        );
+
+        // 4 — ocupar quarto
+        await connection.execute(
+            `UPDATE quarto SET status_ocupacao='Ocupado', id_paciente=?, data_entrada=CURDATE()
+             WHERE id_quarto=?`,
+            [id_paciente, quarto.id_quarto]
+        );
+
+        // 5 — remover da fila
+        await connection.execute(
+            "DELETE FROM lista_espera WHERE id_lista=?",
+            [id]
+        );
+
+        // 6 — WhatsApp
+        const [pac] = await connection.execute(
+            "SELECT nome, telefone FROM paciente WHERE id_paciente=?",
+            [id_paciente]
+        );
+
+        await enviarWhatsApp(
+            pac[0].telefone,
+            `Olá ${pac[0].nome}! 💙\nUm quarto acabou de ser liberado e você foi alocado!\n🛏️ Quarto: ${quarto.numero}\n📅 Entrada: HOJE`
+        );
+
+        await connection.end();
+
+        res.json({ message: "Paciente alocado com sucesso e WhatsApp enviado!" });
+
+    } catch (err) {
+        console.error("Erro alocar da lista:", err);
+        res.status(500).json({ error: "Erro ao alocar paciente" });
+    }
 });
 
 // INICIAR SERVIDOR

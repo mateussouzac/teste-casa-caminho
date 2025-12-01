@@ -49,7 +49,6 @@ export default function CadastroQuarto() {
     e.preventDefault();
     setErr("");
     
-    // Validação simples
     if (!form.number) {
         setErr("O número do quarto é obrigatório.");
         return;
@@ -65,13 +64,23 @@ export default function CadastroQuarto() {
         body: JSON.stringify(form)
       });
 
-      if (!res.ok) throw new Error("Falha na requisição");
+      // --- AQUI ESTÁ A MUDANÇA ---
+      const data = await res.json(); // Lemos a resposta do servidor
 
-      await refresh(); // Recarrega a lista
-      cancelEdit(); // Limpa o formulário
+      if (!res.ok) {
+        // Se deu erro, lançamos o erro real que veio do servidor
+        throw new Error(data.error || "Erro desconhecido no servidor");
+      }
+
+      // Se chegou aqui, deu sucesso
+      await refresh();
+      cancelEdit();
+      alert(isEditing ? "Quarto atualizado!" : "Quarto cadastrado com sucesso!");
       
     } catch (e) {
-      setErr("Erro ao salvar quarto.");
+      console.error(e);
+      // Agora o setErr vai mostrar o motivo real do problema na tela
+      setErr(e.message);
     }
   }
 

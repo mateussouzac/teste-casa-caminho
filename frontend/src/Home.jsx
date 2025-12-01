@@ -92,7 +92,7 @@ function Home() {
                         CADASTRO DE QUARTO
                     </Link>
                     <Link to="/lista-espera" className="btn-menu active">
-                        VER LISTA DE ESPERA
+                        LISTA DE ESPERA
                     </Link>
                 </div>
             </section>
