@@ -187,28 +187,42 @@
 .room-item {
     display: flex;
     justify-content: space-between;
+    align-items: center; /* Centraliza verticalmente */
     padding: 12px 15px;
     border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 8px; /* Espaço entre os quartos */
 }
 
-.room-item.livre {
-    background-color: #d1e7dd;
-    color: #0f5132;
-    border-left: 5px solid #198754;
+/* Estilo para as cores das barras (mantendo o que já tinha) */
+.room-item.livre { background-color: #d1e7dd; color: #0f5132; border-left: 5px solid #198754; }
+.room-item.ocupado { background-color: #cfe2ff; color: #084298; border-left: 5px solid #0d6efd; }
+.room-item.manutenção { background-color: #fff3cd; color: #664d03; border-left: 5px solid #ffc107; }
+
+/* NOVO: Estilo para o texto do quarto */
+.room-details {
+    display: flex;
+    flex-direction: column; /* Coloca o tipo embaixo do número */
+    align-items: flex-start;
 }
 
-.room-item.ocupado {
-    background-color: #cfe2ff;
-    color: #084298;
-    border-left: 5px solid #0d6efd;
+.room-details strong {
+    font-size: 1rem;
+    color: #333; /* Texto escuro para leitura fácil */
 }
 
-.room-item.manutenção {
-    background-color: #fff3cd;
-    color: #664d03;
-    border-left: 5px solid #ffc107;
+.room-details small {
+    font-size: 0.8rem;
+    color: #555; /* Texto cinza para o tipo */
+    margin-top: 2px;
+}
+
+/* Ajuste no rótulo do status (Livre/Ocupado) */
+.status-label {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+
 }
 
 /* --- STATUS GERAL (QUADRADOS) --- */

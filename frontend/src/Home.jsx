@@ -107,20 +107,22 @@ function Home() {
         </div>
 
         {/* Coluna 2: Mapa de Quartos */}
-        <div className="col-map">
-            <section className="card">
-                <h3>Mapa de Ocupação</h3>
-                <div className="room-list">
-                    {data.quartos.map(quarto => (
-                        <div key={quarto.id_quarto} className={`room-item ${quarto.status_ocupacao.toLowerCase()}`}>
-                            <span>{quarto.tipo_quarto}</span>
-                            <span className="status-label">{quarto.status_ocupacao}</span>
-                        </div>
-                    ))}
-                    {data.quartos.length === 0 && <p style={{padding: '10px'}}>Nenhum quarto cadastrado.</p>}
-                </div>
-            </section>
+        <div className="room-list">
+    {data.quartos.map(quarto => (
+        <div key={quarto.id_quarto} className={`room-item ${quarto.status_ocupacao.toLowerCase()}`}>
+            
+            {/* NOVO: Mostra o Número e o Tipo do Quarto */}
+            <div className="room-details">
+                <strong>Quarto {quarto.numero}</strong>
+                <small>{quarto.tipo_quarto}</small>
+            </div>
+
+            <span className="status-label">{quarto.status_ocupacao}</span>
         </div>
+    ))}
+    
+    {data.quartos.length === 0 && <p style={{padding: '10px'}}>Nenhum quarto cadastrado.</p>}
+</div>
 
         {/* Coluna 3: Status e Chegadas */}
         <div className="col-status">
